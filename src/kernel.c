@@ -11,6 +11,28 @@ static struct lime_value kernel_heap_exception = {
     }
 };
 
+/**
+ * This function must be implemented by the module author.
+ * It is executed as soon as the virtual machine loads the native library.
+ * @param stack The stack of the current environment.
+ * @return Either an exception or 'NULL' if no exception occurred.
+ */
+LimeValue lime_module_initialize(LimeStack stack) {
+    printf("initialize kernel\n");
+    return NULL;
+}
+
+/**
+ * This function must be implemented by the module author.
+ * It is executed as soon as the virtual machine unloads the native library.
+ * @param stack The stack of the current environment.
+ * @return Either an exception or 'NULL' if no exception occurred.
+ */
+LimeValue lime_module_finalize(LimeStack stack) {
+    printf("finalize kernel\n");
+    return NULL;
+}
+
 LimeValue kernel_type(LimeStack stack) {
     // static cache for type names
 
