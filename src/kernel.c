@@ -18,8 +18,33 @@ static struct lime_value kernel_heap_exception = {
  * @return Either an exception or 'NULL' if no exception occurred.
  */
 LimeValue lime_module_initialize(LimeStack stack) {
-    printf("initialize kernel\n");
-    return NULL;
+    static struct lime_value run_symbol = {
+        .type = LimeSymbolValue,
+        .location = NULL,
+        .hash = 31,
+        .symbol = {
+            .length = 3,
+            .bytes = "run"
+        }
+    };
+
+    static struct lime_value run_function = {
+        .type = LimeNativeValue,
+        .location = NULL,
+        .hash = (u64) kernel_run,
+        .function = {
+            .function = kernel_run
+        }
+    };
+
+    LimeResult result = lime_map_put(stack, *stack->dictionary, &run_symbol, &run_function);
+
+    if (result.failure) {
+        return result.exception;
+    } else {
+        *stack->dictionary = result.value;
+        return NULL;
+    }
 }
 
 /**
