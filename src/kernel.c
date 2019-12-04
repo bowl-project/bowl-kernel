@@ -21,7 +21,7 @@ LimeValue lime_module_initialize(LimeStack stack) {
     static struct lime_value run_symbol = {
         .type = LimeSymbolValue,
         .location = NULL,
-        .hash = 31,
+        .hash = 0,
         .symbol = {
             .length = 3,
             .bytes = "run"
@@ -31,8 +31,9 @@ LimeValue lime_module_initialize(LimeStack stack) {
     static struct lime_value run_function = {
         .type = LimeNativeValue,
         .location = NULL,
-        .hash = (u64) kernel_run,
+        .hash = 0,
         .function = {
+            .library = NULL,
             .function = kernel_run
         }
     };
@@ -442,9 +443,10 @@ LimeValue kernel_run(LimeStack stack) {
     static struct lime_value marker = {
         .type = LimeSymbolValue,
         .location = NULL,
-        .hash = 31,
+        .hash = 0,
         .symbol = {
-            .length = 0
+            .length = 0,
+            .bytes = ""
         }
     };
 
@@ -458,7 +460,9 @@ LimeValue kernel_run(LimeStack stack) {
     frame.datastack = &datastack;
     *stack->datastack = (*stack->datastack)->list.tail;
 
-    if (*stack->datastack == NULL) {
+    if (datastack != NULL && datastack->type != LimeListValue) {
+        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(datastack), __FUNCTION__);
+    } else if (*stack->datastack == NULL) {
         return lime_exception(&frame, "stack underflow in function '%s'", __FUNCTION__);
     }
 
@@ -466,7 +470,9 @@ LimeValue kernel_run(LimeStack stack) {
     frame.callstack = &callstack;
     *stack->datastack = (*stack->datastack)->list.tail;
 
-    if (*stack->datastack == NULL) {
+    if (callstack != NULL && callstack->type != LimeListValue) {
+        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(callstack), __FUNCTION__);
+    } else if (*stack->datastack == NULL) {
         return lime_exception(&frame, "stack underflow in function '%s'", __FUNCTION__);
     }
 
@@ -474,14 +480,14 @@ LimeValue kernel_run(LimeStack stack) {
     frame.dictionary = &dictionary;
     *stack->datastack = (*stack->datastack)->list.tail;
 
+    if (dictionary == NULL || dictionary->type != LimeMapValue) {
+        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(dictionary), __FUNCTION__);
+    }
+
     LimeResult result;
     while (callstack != NULL) {
         const LimeValue instruction = callstack->list.head;
         callstack = callstack->list.tail;
-
-        lime_value_dump(stdout, datastack);
-        fputc('\n', stdout); 
-        fflush(stdout);
 
         switch (instruction == NULL ? LimeListValue : instruction->type) {
             case LimeSymbolValue:
@@ -536,6 +542,10 @@ LimeValue kernel_run(LimeStack stack) {
                 datastack = result.value;
                 break;
         }
+
+        lime_value_dump(stdout, datastack);
+        fputc('\n', stdout); 
+        fflush(stdout);
     }
 
     return NULL;
