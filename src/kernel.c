@@ -1,284 +1,39 @@
 #include "kernel.h"
 
-// cached version of the out of heap exception
-static struct lime_value kernel_heap_exception = {
-    .type = LimeStringValue,
-    .location = NULL,
-    .hash = 1393540937171791872,
-    .symbol = {
-        .length = 13,
-        .bytes = "out of memory"
-    }
+static KernelFunctionEntry kernel_functions[] = {
+    { .name = "run", .function = kernel_run },
+    { .name = "type", .function = kernel_type },
+    { .name = "hash", .function = kernel_hash },
+    { .name = "equals", .function = kernel_equals },
+    { .name = "show", .function = kernel_show },
+    { .name = "throw", .function = kernel_throw },
+    { .name = "length", .function = kernel_length },
+    { .name = "nil", .function = kernel_nil },
+    { .name = "push", .function = kernel_push },
+    { .name = "library", .function = kernel_library },
+    { .name = "native", .function = kernel_native },
+    { .name = "library-is-loaded", .function = kernel_library_is_loaded }
 };
 
-// symbols and functions
-static struct lime_value kernel_run_symbol = {
-    .type = LimeSymbolValue,
-    .location = NULL,
-    .hash = 0,
-    .symbol = {
-        .length = 3,
-        .bytes = "run"
-    }
-};
+LimeValue lime_module_initialize(LimeStack stack, LimeValue library) {
+    printf("[debug][kernel] initialize ...\n"); fflush(stdout);
 
-static struct lime_value kernel_run_function = {
-    .type = LimeNativeValue,
-    .location = NULL,
-    .hash = 0,
-    .function = {
-        .library = NULL,
-        .function = kernel_run
-    }
-};
-
-static struct lime_value kernel_type_symbol = {
-    .type = LimeSymbolValue,
-    .location = NULL,
-    .hash = 0,
-    .symbol = {
-        .length = 4,
-        .bytes = "type"
-    }
-};
-
-static struct lime_value kernel_type_function = {
-    .type = LimeNativeValue,
-    .location = NULL,
-    .hash = 0,
-    .function = {
-        .library = NULL,
-        .function = kernel_type
-    }
-};
-
-static struct lime_value kernel_hash_symbol = {
-    .type = LimeSymbolValue,
-    .location = NULL,
-    .hash = 0,
-    .symbol = {
-        .length = 4,
-        .bytes = "hash"
-    }
-};
-
-static struct lime_value kernel_hash_function = {
-    .type = LimeNativeValue,
-    .location = NULL,
-    .hash = 0,
-    .function = {
-        .library = NULL,
-        .function = kernel_hash
-    }
-};
-
-static struct lime_value kernel_equals_symbol = {
-    .type = LimeSymbolValue,
-    .location = NULL,
-    .hash = 0,
-    .symbol = {
-        .length = 6,
-        .bytes = "equals"
-    }
-};
-
-static struct lime_value kernel_equals_function = {
-    .type = LimeNativeValue,
-    .location = NULL,
-    .hash = 0,
-    .function = {
-        .library = NULL,
-        .function = kernel_equals
-    }
-};
-
-static struct lime_value kernel_show_symbol = {
-    .type = LimeSymbolValue,
-    .location = NULL,
-    .hash = 0,
-    .symbol = {
-        .length = 4,
-        .bytes = "show"
-    }
-};
-
-static struct lime_value kernel_show_function = {
-    .type = LimeNativeValue,
-    .location = NULL,
-    .hash = 0,
-    .function = {
-        .library = NULL,
-        .function = kernel_show
-    }
-};
-
-static struct lime_value kernel_throw_symbol = {
-    .type = LimeSymbolValue,
-    .location = NULL,
-    .hash = 0,
-    .symbol = {
-        .length = 5,
-        .bytes = "throw"
-    }
-};
-
-static struct lime_value kernel_throw_function = {
-    .type = LimeNativeValue,
-    .location = NULL,
-    .hash = 0,
-    .function = {
-        .library = NULL,
-        .function = kernel_throw
-    }
-};
-
-static struct lime_value kernel_length_symbol = {
-    .type = LimeSymbolValue,
-    .location = NULL,
-    .hash = 0,
-    .symbol = {
-        .length = 6,
-        .bytes = "length"
-    }
-};
-
-static struct lime_value kernel_length_function = {
-    .type = LimeNativeValue,
-    .location = NULL,
-    .hash = 0,
-    .function = {
-        .library = NULL,
-        .function = kernel_length
-    }
-};
-
-static struct lime_value kernel_nil_symbol = {
-    .type = LimeSymbolValue,
-    .location = NULL,
-    .hash = 0,
-    .symbol = {
-        .length = 3,
-        .bytes = "nil"
-    }
-};
-
-static struct lime_value kernel_nil_function = {
-    .type = LimeNativeValue,
-    .location = NULL,
-    .hash = 0,
-    .function = {
-        .library = NULL,
-        .function = kernel_nil
-    }
-};
-
-static struct lime_value kernel_push_symbol = {
-    .type = LimeSymbolValue,
-    .location = NULL,
-    .hash = 0,
-    .symbol = {
-        .length = 4,
-        .bytes = "push"
-    }
-};
-
-static struct lime_value kernel_push_function = {
-    .type = LimeNativeValue,
-    .location = NULL,
-    .hash = 0,
-    .function = {
-        .library = NULL,
-        .function = kernel_push
-    }
-};
-
-static struct lime_value kernel_library_symbol = {
-    .type = LimeSymbolValue,
-    .location = NULL,
-    .hash = 0,
-    .symbol = {
-        .length = 7,
-        .bytes = "library"
-    }
-};
-
-static struct lime_value kernel_library_function = {
-    .type = LimeNativeValue,
-    .location = NULL,
-    .hash = 0,
-    .function = {
-        .library = NULL,
-        .function = kernel_library
-    }
-};
-
-static struct lime_value kernel_native_symbol = {
-    .type = LimeSymbolValue,
-    .location = NULL,
-    .hash = 0,
-    .symbol = {
-        .length = 6,
-        .bytes = "native"
-    }
-};
-
-static struct lime_value kernel_native_function = {
-    .type = LimeNativeValue,
-    .location = NULL,
-    .hash = 0,
-    .function = {
-        .library = NULL,
-        .function = kernel_native
-    }
-};
-
-// list of all kernel functions 
-static LimeValue kernel_functions[] = {
-    &kernel_run_symbol, &kernel_run_function,
-    &kernel_type_symbol, &kernel_type_function,
-    &kernel_hash_symbol, &kernel_hash_function,
-    &kernel_equals_symbol, &kernel_equals_function,
-    &kernel_show_symbol, &kernel_show_function,
-    &kernel_throw_symbol, &kernel_throw_function,
-    &kernel_length_symbol, &kernel_length_function,
-    &kernel_nil_symbol, &kernel_nil_function,
-    &kernel_push_symbol, &kernel_push_function,
-    &kernel_library_symbol, &kernel_library_function,
-    &kernel_native_symbol, &kernel_native_function
-};
-
-/**
- * This function must be implemented by the module author.
- * It is executed as soon as the virtual machine loads the native library.
- * @param stack The stack of the current environment.
- * @return Either an exception or 'NULL' if no exception occurred.
- */
-LimeValue lime_module_initialize(LimeStack stack) {
-    LimeResult result = {
-        .failure = false,
-        .value = *stack->dictionary
-    };
-    
-    for (u64 i = 0; i < sizeof(kernel_functions) / sizeof(kernel_functions[0]); i += 2) {
-        result = lime_map_put(stack, result.value, kernel_functions[i], kernel_functions[i + 1]);
-
-        if (result.failure) {
-            return result.exception;
+    for (u64 i = 0; i < sizeof(kernel_functions) / sizeof(kernel_functions[0]); ++i) {
+        KernelFunctionEntry *const entry = &kernel_functions[i];
+        const LimeValue exception = lime_register_function(stack, entry->name, library, entry->function);
+        if (exception != NULL) {
+            return exception;
         }
     }
-    
-    *stack->dictionary = result.value;
+
+    printf("[debug][kernel] initialized!\n"); fflush(stdout);
+
     return NULL;    
 }
 
-/**
- * This function must be implemented by the module author.
- * It is executed as soon as the virtual machine unloads the native library.
- * @param stack The stack of the current environment.
- * @return Either an exception or 'NULL' if no exception occurred.
- */
-LimeValue lime_module_finalize(LimeStack stack) {
-    printf("finalize kernel\n");
+LimeValue lime_module_finalize(LimeStack stack, LimeValue library) {
+    printf("[debug][kernel] finalize ...\n"); fflush(stdout);
+    printf("[debug][kernel] finalized!\n"); fflush(stdout);
     return NULL;
 }
 
@@ -288,7 +43,7 @@ LimeValue kernel_type(LimeStack stack) {
     static struct lime_value symbol_type = {
         .type = LimeStringValue,
         .location = NULL,
-        .hash = 576032489876310016,
+        .hash = 0,
         .symbol = {
             .length = 6,
             .bytes = "symbol"
@@ -298,7 +53,7 @@ LimeValue kernel_type(LimeStack stack) {
     static struct lime_value list_type = {
         .type = LimeStringValue,
         .location = NULL,
-        .hash = 37538678814,
+        .hash = 0,
         .symbol = {
             .length = 4,
             .bytes = "list"
@@ -308,7 +63,7 @@ LimeValue kernel_type(LimeStack stack) {
     static struct lime_value native_type = {
         .type = LimeStringValue,
         .location = NULL,
-        .hash = 461164099340126272,
+        .hash = 0,
         .symbol = {
             .length = 8,
             .bytes = "function"
@@ -318,7 +73,7 @@ LimeValue kernel_type(LimeStack stack) {
     static struct lime_value map_type = {
         .type = LimeStringValue,
         .location = NULL,
-        .hash = 11420680,
+        .hash = 0,
         .symbol = {
             .length = 3,
             .bytes = "map"
@@ -328,7 +83,7 @@ LimeValue kernel_type(LimeStack stack) {
     static struct lime_value boolean_type = {
         .type = LimeStringValue,
         .location = NULL,
-        .hash = 482558078189590912,
+        .hash = 0,
         .symbol = {
             .length = 7,
             .bytes = "boolean"
@@ -338,7 +93,7 @@ LimeValue kernel_type(LimeStack stack) {
     static struct lime_value number_type = {
         .type = LimeStringValue,
         .location = NULL,
-        .hash = 461248435778548160,
+        .hash = 0,
         .symbol = {
             .length = 6,
             .bytes = "number"
@@ -348,7 +103,7 @@ LimeValue kernel_type(LimeStack stack) {
     static struct lime_value string_type = {
         .type = LimeStringValue,
         .location = NULL,
-        .hash = 576001746853242496,
+        .hash = 0,
         .symbol = {
             .length = 6,
             .bytes = "string"
@@ -358,7 +113,7 @@ LimeValue kernel_type(LimeStack stack) {
     static struct lime_value library_type = {
         .type = LimeStringValue,
         .location = NULL,
-        .hash = 365473802495556352,
+        .hash = 0,
         .symbol = {
             .length = 7,
             .bytes = "library"
@@ -463,7 +218,7 @@ LimeValue kernel_show(LimeStack stack) {
     lime_value_show(value, &buffer, &length);
 
     if (buffer == NULL) {
-        return &kernel_heap_exception;
+        return lime_exception_out_of_heap;
     }
 
     LimeResult result = lime_string(stack, (u8*) buffer, length);
@@ -530,6 +285,7 @@ LimeValue kernel_length(LimeStack stack) {
 
 LimeValue kernel_nil(LimeStack stack) {
     LimeResult result = lime_list(stack, NULL, *stack->datastack);
+    
     if (result.failure) {
         return result.exception;
     } else {
@@ -585,7 +341,7 @@ LimeValue kernel_library(LimeStack stack) {
 
     char *path = lime_string_to_null_terminated(value);
     if (path == NULL) {
-        return &kernel_heap_exception;
+        return lime_exception_out_of_heap;
     }
 
     LimeResult result = lime_library(stack, path);
@@ -629,7 +385,7 @@ LimeValue kernel_native(LimeStack stack) {
 
     char *const symbol_name = lime_string_to_null_terminated(symbol);
     if (symbol_name == NULL) {
-        return &kernel_heap_exception;
+        return lime_exception_out_of_heap;
     }
 
     #if defined(OS_UNIX)
@@ -663,16 +419,6 @@ LimeValue kernel_native(LimeStack stack) {
 }
 
 LimeValue kernel_run(LimeStack stack) {
-    static struct lime_value marker = {
-        .type = LimeSymbolValue,
-        .location = NULL,
-        .hash = 0,
-        .symbol = {
-            .length = 0,
-            .bytes = ""
-        }
-    };
-
     LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
 
     if (*stack->datastack == NULL) {
@@ -716,8 +462,8 @@ LimeValue kernel_run(LimeStack stack) {
             case LimeSymbolValue:
                 {
                     // look up the symbol in dictionary and push associated value to the callstack
-                    frame.registers[0] = lime_map_get_or_else(dictionary, instruction, &marker);
-                    if (frame.registers[0] == &marker) {
+                    frame.registers[0] = lime_map_get_or_else(dictionary, instruction, lime_sentinel_value);
+                    if (frame.registers[0] == lime_sentinel_value) {
                         // symbol not found => push it to the datastack
                         result = lime_list(&frame, instruction, datastack);
 
@@ -772,4 +518,41 @@ LimeValue kernel_run(LimeStack stack) {
     }
 
     return NULL;
+}
+
+LimeValue kernel_library_is_loaded(LimeStack stack) {
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    const LimeValue value = (*stack->datastack)->list.head;
+    *stack->datastack = (*stack->datastack)->list.tail;
+
+    if (value == NULL || value->type != LimeStringValue) {
+        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", lime_value_type(value), __FUNCTION__);
+    }
+
+    char *path = lime_string_to_null_terminated(value);
+    if (path == NULL) {
+        return lime_exception_out_of_heap;
+    }
+
+    bool loaded = lime_library_is_loaded(path);
+    free(path);
+
+    LimeResult result = lime_boolean(stack, loaded);
+    
+    if (result.failure) {
+        return result.exception;
+    }
+
+    result = lime_list(stack, result.value, *stack->datastack);
+    
+    if (result.failure) {
+        return result.exception;
+    }
+
+    *stack->datastack = result.value;
+
+    return NULL;    
 }

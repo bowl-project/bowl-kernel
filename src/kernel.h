@@ -3,6 +3,11 @@
 
 #include "../../lime/src/interface/api.h"
 
+typedef struct {
+    char *name;
+    LimeFunction function;
+} KernelFunctionEntry;
+
 LimeValue kernel_type(LimeStack stack);
 
 LimeValue kernel_hash(LimeStack stack);
@@ -24,5 +29,7 @@ LimeValue kernel_library(LimeStack stack);
 LimeValue kernel_native(LimeStack stack);
 
 LimeValue kernel_run(LimeStack stack);
+
+LimeValue kernel_library_is_loaded(LimeStack stack);
 
 #endif
