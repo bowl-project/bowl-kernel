@@ -16,24 +16,20 @@ static KernelFunctionEntry kernel_functions[] = {
 };
 
 LimeValue lime_module_initialize(LimeStack stack, LimeValue library) {
-    printf("[debug][kernel] initialize ...\n"); fflush(stdout);
+    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, library, NULL, NULL);
 
     for (u64 i = 0; i < sizeof(kernel_functions) / sizeof(kernel_functions[0]); ++i) {
         KernelFunctionEntry *const entry = &kernel_functions[i];
-        const LimeValue exception = lime_register_function(stack, entry->name, library, entry->function);
+        const LimeValue exception = lime_register_function(&frame, entry->name, frame.registers[0], entry->function);
         if (exception != NULL) {
             return exception;
         }
     }
 
-    printf("[debug][kernel] initialized!\n"); fflush(stdout);
-
     return NULL;    
 }
 
 LimeValue lime_module_finalize(LimeStack stack, LimeValue library) {
-    printf("[debug][kernel] finalize ...\n"); fflush(stdout);
-    printf("[debug][kernel] finalized!\n"); fflush(stdout);
     return NULL;
 }
 
