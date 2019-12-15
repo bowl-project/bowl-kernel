@@ -2,17 +2,24 @@
 
 static KernelFunctionEntry kernel_functions[] = {
     { .name = "run", .function = kernel_run },
+    { .name = "dup", .function = kernel_dup },
     { .name = "type", .function = kernel_type },
     { .name = "hash", .function = kernel_hash },
     { .name = "equals", .function = kernel_equals },
     { .name = "show", .function = kernel_show },
     { .name = "throw", .function = kernel_throw },
     { .name = "length", .function = kernel_length },
+    { .name = "+", .function = kernel_add },
+    { .name = "contains", .function = kernel_contains },
+    { .name = "nim", .function = kernel_nim },
+    { .name = "put", .function = kernel_put },
+    { .name = "get", .function = kernel_get },
+    { .name = "del", .function = kernel_del },
     { .name = "nil", .function = kernel_nil },
     { .name = "push", .function = kernel_push },
+    { .name = "pop", .function = kernel_pop },
     { .name = "library", .function = kernel_library },
-    { .name = "native", .function = kernel_native },
-    { .name = "library-is-loaded", .function = kernel_library_is_loaded }
+    { .name = "native", .function = kernel_native }
 };
 
 LimeValue lime_module_initialize(LimeStack stack, LimeValue library) {
@@ -31,6 +38,220 @@ LimeValue lime_module_initialize(LimeStack stack, LimeValue library) {
 
 LimeValue lime_module_finalize(LimeStack stack, LimeValue library) {
     return NULL;
+}
+
+LimeValue kernel_add(LimeStack stack) {
+    // a b -- c^
+    
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    const LimeValue a = (*stack->datastack)->list.head;
+    *stack->datastack = (*stack->datastack)->list.tail;
+
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    LimeValue b = (*stack->datastack)->list.head;
+    *stack->datastack = (*stack->datastack)->list.tail;
+
+    const LimeValueType a_type = a == NULL ? LimeListValue : a->type;
+    const LimeValueType b_type = b == NULL ? LimeListValue : b->type;
+
+    if (a_type != b_type) {
+        // type mismatch
+    }
+    
+    switch (a_type) {
+        case LimeListValue:
+            // list concatenation
+            break;
+        case LimeMapValue:
+            // map merge
+            break;
+        case LimeStringValue:
+            // string concatenation
+            break;
+        case LimeNumberValue:
+            // numeric addition
+            break;
+        default:
+            // illegal type
+            break;
+    }
+
+}
+
+LimeValue kernel_contains(LimeStack stack) {
+    // value|key list|map -- boolean
+
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    const LimeValue needle = (*stack->datastack)->list.head;
+    *stack->datastack = (*stack->datastack)->list.tail;
+
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    LimeValue haystack = (*stack->datastack)->list.head;
+    *stack->datastack = (*stack->datastack)->list.tail;
+
+    bool contains;
+    if (haystack == NULL) {
+        contains = false;
+    } else if (haystack->type == LimeListValue) {
+        contains = false;
+        do {
+            if (lime_value_equals(haystack->list.head, needle)) {
+                contains = true;
+                break;
+            }
+
+            haystack = haystack->list.tail;
+        } while (haystack != NULL);
+    } else if (haystack->type == LimeMapValue) {
+        contains = lime_map_get_or_else(haystack, needle, lime_sentinel_value) != lime_sentinel_value;
+    } else {
+        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'list' or 'map')", lime_value_type(haystack), __FUNCTION__);
+    }
+
+    LimeResult result = lime_boolean(stack, contains);
+
+    if (result.failure) {
+        return result.exception;
+    }
+
+    result = lime_list(stack, result.value, *stack->datastack);
+
+    if (result.failure) {
+        return result.exception;
+    } else {
+        *stack->datastack = result.value;
+        return NULL;
+    }
+}
+
+LimeValue kernel_nim(LimeStack stack) {
+    LimeResult result = lime_map(stack, 16);
+
+    if (result.failure) {
+        return result.exception;
+    }
+
+    result = lime_list(stack, result.value, *stack->datastack);
+
+    if (result.failure) {
+        return result.exception;
+    } else {
+        *stack->datastack = result.value;
+        return NULL;
+    }
+}
+
+LimeValue kernel_put(LimeStack stack) {
+    // key value map -- map
+
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    const LimeValue key = (*stack->datastack)->list.head;
+    *stack->datastack = (*stack->datastack)->list.tail;
+
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    const LimeValue value = (*stack->datastack)->list.head;
+    *stack->datastack = (*stack->datastack)->list.tail;
+
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    const LimeValue map = (*stack->datastack)->list.head;
+    *stack->datastack = (*stack->datastack)->list.tail;
+
+    if (map == NULL || map->type != LimeMapValue) {
+        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(map), __FUNCTION__);
+    }
+
+    LimeResult result = lime_map_put(stack, map, key, value);
+
+    if (result.failure) {
+        return result.exception;
+    }
+
+    result = lime_list(stack, result.value, *stack->datastack);
+
+    if (result.failure) {
+        return result.exception;
+    } else {
+        *stack->datastack = result.value;
+        return NULL;
+    }
+}
+
+LimeValue kernel_get(LimeStack stack) {
+    // key value map -- value
+
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    const LimeValue key = (*stack->datastack)->list.head;
+    *stack->datastack = (*stack->datastack)->list.tail;
+
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    const LimeValue value = (*stack->datastack)->list.head;
+    *stack->datastack = (*stack->datastack)->list.tail;
+
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    const LimeValue map = (*stack->datastack)->list.head;
+    *stack->datastack = (*stack->datastack)->list.tail;
+
+    if (map == NULL || map->type != LimeMapValue) {
+        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(map), __FUNCTION__);
+    }
+
+    LimeResult result = lime_list(stack, lime_map_get_or_else(map, key, value), *stack->datastack);
+
+    if (result.failure) {
+        return result.exception;
+    } else {
+        *stack->datastack = result.value;
+        return NULL;
+    }
+}
+
+LimeValue kernel_del(LimeStack stack) {
+    return lime_exception(stack, "'del' is not yet implemented");
+}
+
+LimeValue kernel_dup(LimeStack stack) {
+    if (*stack->datastack == NULL) {
+        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    LimeResult result = lime_list(stack, (*stack->datastack)->list.head, *stack->datastack);
+
+    if (result.failure) {
+        return result.exception;
+    } else {
+        *stack->datastack = result.value;
+        return NULL;
+    }
 }
 
 LimeValue kernel_type(LimeStack stack) {
@@ -323,6 +544,40 @@ LimeValue kernel_push(LimeStack stack) {
     }
 }
 
+LimeValue kernel_pop(LimeStack stack) {
+    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+
+    if (*frame.datastack == NULL) {
+        return lime_exception(&frame, "stack underflow in function '%s'", __FUNCTION__);
+    }
+
+    frame.registers[0] = (*frame.datastack)->list.head;
+    *frame.datastack = (*frame.datastack)->list.tail;
+
+    if (frame.registers[0] != NULL && frame.registers[0]->type != LimeListValue) {
+        return lime_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(frame.registers[0]), __FUNCTION__);
+    }
+
+    if (frame.registers[0] == NULL) {
+        return lime_exception(&frame, "illegal argument (empty list) provided in function '%s'", __FUNCTION__);
+    }
+
+    LimeResult result = lime_list(&frame, frame.registers[0]->list.tail, *frame.datastack);
+    
+    if (result.failure) {
+        return result.exception;
+    }
+
+    result = lime_list(&frame, frame.registers[0]->list.head, result.value);
+
+    if (result.failure) {
+        return result.exception;
+    } else {
+        *frame.datastack = result.value;
+        return NULL;
+    }
+}
+
 LimeValue kernel_library(LimeStack stack) {
     if (*stack->datastack == NULL) {
         return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
@@ -514,41 +769,4 @@ LimeValue kernel_run(LimeStack stack) {
     }
 
     return NULL;
-}
-
-LimeValue kernel_library_is_loaded(LimeStack stack) {
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue value = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
-    if (value == NULL || value->type != LimeStringValue) {
-        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", lime_value_type(value), __FUNCTION__);
-    }
-
-    char *path = lime_string_to_null_terminated(value);
-    if (path == NULL) {
-        return lime_exception_out_of_heap;
-    }
-
-    bool loaded = lime_library_is_loaded(path);
-    free(path);
-
-    LimeResult result = lime_boolean(stack, loaded);
-    
-    if (result.failure) {
-        return result.exception;
-    }
-
-    result = lime_list(stack, result.value, *stack->datastack);
-    
-    if (result.failure) {
-        return result.exception;
-    }
-
-    *stack->datastack = result.value;
-
-    return NULL;    
 }
