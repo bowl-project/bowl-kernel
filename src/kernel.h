@@ -1,7 +1,7 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
-#include "../../lime/src/interface/api.h"
+#include <lime/api.h>
 
 typedef struct {
     char *name;
