@@ -9,49 +9,58 @@ typedef struct {
 } KernelFunctionEntry;
 
 /**
- * Adds the two topmost values and pushes the result onto the stack.
+ * Adds the two topmost values and pushes the result on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
 LimeValue kernel_add(LimeStack stack);
 
 /**
- * Pushes two copies of the topmost value onto the stack.
+ * Checks whether the topmost value is an element of the topmost but one value.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
 LimeValue kernel_contains(LimeStack stack);
 
 /**
- * Pushes two copies of the topmost value onto the stack.
+ * Pushes the empty map value on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
 LimeValue kernel_nim(LimeStack stack);
 
 /**
- * Pushes two copies of the topmost value onto the stack.
+ * Expects a key, a value and a map as the three topmost values to be on stack. 
+ * Inserts the value into the map using the provided key. If there is already a
+ * value associated with this key, the old value will be overwritten with the new
+ * one.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
 LimeValue kernel_put(LimeStack stack);
 
 /**
- * Pushes two copies of the topmost value onto the stack.
+ * Expects a key, a value and a map as the three topmost values to be on stack.
+ * Fetches the value which is associated with the provided key from the map. If
+ * there is no value associated with this key, the provided one is pushed on
+ * the stack instead.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
 LimeValue kernel_get(LimeStack stack);
 
 /**
- * Pushes two copies of the topmost value onto the stack.
+ * Expects a key, a value and a map as the three topmost values to be on stack.
+ * Deletes the value which is associated with the provided key from the map and
+ * pushes it on the stack. If there was no value associated with this key, the
+ * provided value is pushed on the stack instead.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
 LimeValue kernel_del(LimeStack stack);
 
 /**
- * Pushes two copies of the topmost value onto the stack.
+ * Pushes two copies of the topmost value on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
@@ -100,14 +109,14 @@ LimeValue kernel_throw(LimeStack stack);
 LimeValue kernel_length(LimeStack stack);
 
 /**
- * Pushes the empty list onto the stack.
+ * Pushes the empty list on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
 LimeValue kernel_nil(LimeStack stack);
 
 /**
- * Pushes a new list consisting of the two topmost values onto the stack. 
+ * Pushes a new list consisting of the two topmost values on the stack. 
  * While the topmost value has to be a list, the second one may be an arbitrary
  * head element.
  * @param stack The stack of the current environment.
@@ -116,21 +125,21 @@ LimeValue kernel_nil(LimeStack stack);
 LimeValue kernel_push(LimeStack stack);
 
 /**
- * Pushes the head and tail of the topmost list value onto the stack.
+ * Pushes the head and tail of the topmost list value on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
 LimeValue kernel_pop(LimeStack stack);
 
 /**
- * Pushes a library value denoted by topmost path value onto the stack.
+ * Pushes a library value denoted by topmost path value on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
 LimeValue kernel_library(LimeStack stack);
 
 /**
- * Pushes a native function value denoted by the two topmost values onto the stack.
+ * Pushes a native function value denoted by the two topmost values on the stack.
  * While the topmost value has to be the name of the native function, the second
  * value has to be a library value whose underlying shared library contains an equally
  * named symbol.

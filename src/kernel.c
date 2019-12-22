@@ -41,65 +41,135 @@ LimeValue lime_module_finalize(LimeStack stack, LimeValue library) {
 }
 
 LimeValue kernel_add(LimeStack stack) {
-    // a b -- c^
-    
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
+    LimeStackFrame temporary = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(&temporary, NULL, NULL, NULL);
 
-    const LimeValue a = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[1]);
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
 
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    LimeValue b = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
-    const LimeValueType a_type = a == NULL ? LimeListValue : a->type;
-    const LimeValueType b_type = b == NULL ? LimeListValue : b->type;
+    const LimeValueType a_type = frame.registers[0] == NULL ? LimeListValue : frame.registers[0]->type;
+    const LimeValueType b_type = frame.registers[1] == NULL ? LimeListValue : frame.registers[1]->type;
 
     if (a_type != b_type) {
-        // type mismatch
+        return lime_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected '%s')", lime_value_type(frame.registers[1]), __FUNCTION__, lime_value_type(frame.registers[0]));
     }
     
+    LimeResult result;
     switch (a_type) {
         case LimeListValue:
             // list concatenation
+
+            frame.registers[2] = NULL;
+            while (frame.registers[0] != NULL) {
+                result = lime_list(&frame, frame.registers[0]->list.head, frame.registers[2]);
+
+                if (result.failure) {
+                    return result.exception;
+                } else {
+                    frame.registers[2] = result.value;
+                }
+
+                frame.registers[0] = frame.registers[0]->list.tail;
+            }
+
+            frame.registers[0] = frame.registers[1];
+            while (frame.registers[2] != NULL) {
+                result = lime_list(&frame, frame.registers[2]->list.head, frame.registers[0]);
+
+                if (result.failure) {
+                    return result.exception;
+                } else {
+                    frame.registers[0] = result.value;
+                }
+
+                frame.registers[2] = frame.registers[2]->list.tail;
+            }
+
+            result.value = frame.registers[0];
             break;
         case LimeMapValue:
             // map merge
+            result = lime_map(&frame, (u64) ((frame.registers[0]->map.capacity + frame.registers[1]->map.capacity) * (4.0 / 3.0)));
+            
+            if (!result.failure) {
+                frame.registers[2] = result.value;
+
+                // add the first map
+                for (u64 i = 0; i < frame.registers[0]->map.capacity; ++i) {
+                    temporary.registers[0] = frame.registers[0]->map.buckets[i];
+
+                    while (temporary.registers[0] != NULL) {
+                        result = lime_map_put(&frame, frame.registers[2], temporary.registers[0]->list.head, temporary.registers[0]->list.tail->list.head);
+
+                        if (result.failure) {
+                            return result.exception;
+                        } else {
+                            frame.registers[2] = result.value;
+                        }
+
+                        temporary.registers[0] = temporary.registers[0]->list.tail->list.tail;
+                    }
+                }
+
+                // add the second map
+                for (u64 i = 0; i < frame.registers[1]->map.capacity; ++i) {
+                    temporary.registers[0] = frame.registers[1]->map.buckets[i];
+
+                    while (temporary.registers[0] != NULL && !result.failure) {
+                        result = lime_map_put(&frame, frame.registers[2], temporary.registers[0]->list.head, temporary.registers[0]->list.tail->list.head);
+                        
+                        if (result.failure) {
+                            return result.exception;
+                        } else {
+                            frame.registers[2] = result.value;
+                        }
+                        
+                        temporary.registers[0] = temporary.registers[0]->list.tail->list.tail;
+                    }
+                }
+
+                result.value = frame.registers[2];
+            }
+
             break;
         case LimeStringValue:
             // string concatenation
+            result = lime_allocate(&frame, LimeStringValue, frame.registers[0]->string.length + frame.registers[1]->string.length);
+
+            if (!result.failure) {
+                memcpy(result.value->string.bytes, frame.registers[0]->string.bytes, frame.registers[0]->string.length);
+                memcpy(result.value->string.bytes + frame.registers[0]->string.length, frame.registers[1]->string.bytes, frame.registers[1]->string.length);
+                result.value->string.length = frame.registers[0]->string.length + frame.registers[1]->string.length;
+            }
+
             break;
         case LimeNumberValue:
-            // numeric addition
+            result = lime_number(&frame, frame.registers[0]->number.value + frame.registers[1]->number.value);
             break;
         default:
-            // illegal type
-            break;
+            return lime_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list', 'string', 'number' or 'map')", lime_value_type(frame.registers[0]), __FUNCTION__);
     }
 
+    if (result.failure) {
+        return result.exception;
+    }
+
+    result = lime_list(&frame, result.value, *frame.datastack);
+
+    if (result.failure) {
+        return result.exception;
+    } else {
+        *frame.datastack = result.value;
+        return NULL;
+    }
 }
 
 LimeValue kernel_contains(LimeStack stack) {
-    // value|key list|map -- boolean
+    LimeValue needle;
+    LimeValue haystack;
 
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue needle = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    LimeValue haystack = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    LIME_STACK_POP_VALUE(stack, &needle);
+    LIME_STACK_POP_VALUE(stack, &haystack);
 
     bool contains;
     if (haystack == NULL) {
@@ -154,28 +224,13 @@ LimeValue kernel_nim(LimeStack stack) {
 }
 
 LimeValue kernel_put(LimeStack stack) {
-    // key value map -- map
+    LimeValue key;
+    LimeValue value;
+    LimeValue map;
 
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue key = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue value = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue map = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    LIME_STACK_POP_VALUE(stack, &key);
+    LIME_STACK_POP_VALUE(stack, &value);
+    LIME_STACK_POP_VALUE(stack, &map);
 
     if (map == NULL || map->type != LimeMapValue) {
         return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(map), __FUNCTION__);
@@ -198,28 +253,13 @@ LimeValue kernel_put(LimeStack stack) {
 }
 
 LimeValue kernel_get(LimeStack stack) {
-    // key value map -- value
+    LimeValue key;
+    LimeValue value;
+    LimeValue map;
 
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue key = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue value = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue map = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    LIME_STACK_POP_VALUE(stack, &key);
+    LIME_STACK_POP_VALUE(stack, &value);
+    LIME_STACK_POP_VALUE(stack, &map);
 
     if (map == NULL || map->type != LimeMapValue) {
         return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(map), __FUNCTION__);
@@ -348,13 +388,10 @@ LimeValue kernel_type(LimeStack stack) {
         [LimeLibraryValue] = &library_type
     };
     
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
+    LimeValue value;
 
-    const LimeValue value = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
+    LIME_STACK_POP_VALUE(stack, &value);
+   
     const LimeValue type = value == NULL ? types[LimeListValue] : types[value->type];
     const LimeResult result = lime_list(stack, type, *stack->datastack);
 
@@ -367,12 +404,9 @@ LimeValue kernel_type(LimeStack stack) {
 }
 
 LimeValue kernel_hash(LimeStack stack) {
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
+    LimeValue value;
 
-    const LimeValue value = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    LIME_STACK_POP_VALUE(stack, &value);
 
     const u64 hash = lime_value_hash(value);
     LimeResult result = lime_number(stack, (double) hash);
@@ -392,19 +426,11 @@ LimeValue kernel_hash(LimeStack stack) {
 }
 
 LimeValue kernel_equals(LimeStack stack) {
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
+    LimeValue a;
+    LimeValue b;
 
-    const LimeValue a = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue b = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    LIME_STACK_POP_VALUE(stack, &b);
+    LIME_STACK_POP_VALUE(stack, &a);
 
     const bool equals = lime_value_equals(a, b);
     LimeResult result = lime_boolean(stack, equals);
@@ -423,12 +449,9 @@ LimeValue kernel_equals(LimeStack stack) {
 }
 
 LimeValue kernel_show(LimeStack stack) {
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
+    LimeValue value;
 
-    const LimeValue value = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    LIME_STACK_POP_VALUE(stack, &value);
 
     char *buffer;
     u64 length;
@@ -455,23 +478,15 @@ LimeValue kernel_show(LimeStack stack) {
 }
 
 LimeValue kernel_throw(LimeStack stack) {
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue value = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
+    LimeValue value;
+    LIME_STACK_POP_VALUE(stack, &value);
     return value;
 }
 
 LimeValue kernel_length(LimeStack stack) {
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
+    LimeValue value;
 
-    const LimeValue value = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    LIME_STACK_POP_VALUE(stack, &value);
 
     const u64 length = lime_value_length(value);
     switch (value == NULL ? LimeListValue : value->type) {
@@ -512,19 +527,11 @@ LimeValue kernel_nil(LimeStack stack) {
 }
 
 LimeValue kernel_push(LimeStack stack) {
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
+    LimeValue head;
+    LimeValue tail;
 
-    const LimeValue head = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue tail = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    LIME_STACK_POP_VALUE(stack, &head);
+    LIME_STACK_POP_VALUE(stack, &tail);
 
     if (tail != NULL && tail->type != LimeListValue) {
         return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(tail), __FUNCTION__);
@@ -547,12 +554,7 @@ LimeValue kernel_push(LimeStack stack) {
 LimeValue kernel_pop(LimeStack stack) {
     LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
 
-    if (*frame.datastack == NULL) {
-        return lime_exception(&frame, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    frame.registers[0] = (*frame.datastack)->list.head;
-    *frame.datastack = (*frame.datastack)->list.tail;
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
 
     if (frame.registers[0] != NULL && frame.registers[0]->type != LimeListValue) {
         return lime_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(frame.registers[0]), __FUNCTION__);
@@ -579,12 +581,9 @@ LimeValue kernel_pop(LimeStack stack) {
 }
 
 LimeValue kernel_library(LimeStack stack) {
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
+    LimeValue value;
 
-    const LimeValue value = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    LIME_STACK_POP_VALUE(stack, &value);
 
     if (value == NULL || value->type != LimeStringValue) {
         return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", lime_value_type(value), __FUNCTION__);
@@ -612,23 +611,15 @@ LimeValue kernel_library(LimeStack stack) {
 }
 
 LimeValue kernel_native(LimeStack stack) {
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
+    LimeValue symbol;
+    LimeValue library;
 
-    const LimeValue symbol = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    LIME_STACK_POP_VALUE(stack, &symbol);
+    LIME_STACK_POP_VALUE(stack, &library);
 
-    if (symbol == NULL || symbol->type != LimeLibraryValue) {
+    if (symbol == NULL || symbol->type != LimeStringValue) {
         return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", lime_value_type(symbol), __FUNCTION__);
     }
-
-    if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
-    }
-
-    const LimeValue library = (*stack->datastack)->list.head;
-    *stack->datastack = (*stack->datastack)->list.tail;
 
     if (library == NULL || library->type != LimeLibraryValue) {
         return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'library')", lime_value_type(library), __FUNCTION__);
@@ -672,36 +663,28 @@ LimeValue kernel_native(LimeStack stack) {
 LimeValue kernel_run(LimeStack stack) {
     LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
 
-    if (*stack->datastack == NULL) {
-        return lime_exception(&frame, "stack underflow in function '%s'", __FUNCTION__);
-    }
+    LimeValue datastack;
+    LimeValue callstack;
+    LimeValue dictionary;
 
-    LimeValue datastack = (*stack->datastack)->list.head;
+    LIME_STACK_POP_VALUE(&frame, &datastack);
+    LIME_STACK_POP_VALUE(&frame, &callstack);
+    LIME_STACK_POP_VALUE(&frame, &dictionary);
+
     frame.datastack = &datastack;
-    *stack->datastack = (*stack->datastack)->list.tail;
+    frame.callstack = &callstack;
+    frame.dictionary = &dictionary;
 
     if (datastack != NULL && datastack->type != LimeListValue) {
-        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(datastack), __FUNCTION__);
-    } else if (*stack->datastack == NULL) {
-        return lime_exception(&frame, "stack underflow in function '%s'", __FUNCTION__);
+        return lime_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(datastack), __FUNCTION__);
     }
-
-    LimeValue callstack  = (*stack->datastack)->list.head;
-    frame.callstack = &callstack;
-    *stack->datastack = (*stack->datastack)->list.tail;
 
     if (callstack != NULL && callstack->type != LimeListValue) {
-        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(callstack), __FUNCTION__);
-    } else if (*stack->datastack == NULL) {
-        return lime_exception(&frame, "stack underflow in function '%s'", __FUNCTION__);
+        return lime_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(callstack), __FUNCTION__);
     }
 
-    LimeValue dictionary = (*stack->datastack)->list.head;
-    frame.dictionary = &dictionary;
-    *stack->datastack = (*stack->datastack)->list.tail;
-
     if (dictionary == NULL || dictionary->type != LimeMapValue) {
-        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(dictionary), __FUNCTION__);
+        return lime_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(dictionary), __FUNCTION__);
     }
 
     LimeResult result;
