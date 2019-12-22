@@ -30,7 +30,7 @@ LimeValue kernel_contains(LimeStack stack);
 LimeValue kernel_nim(LimeStack stack);
 
 /**
- * Expects a key, a value and a map as the three topmost values to be on stack. 
+ * Expects a key, a value and a map as the three topmost values on the stack. 
  * Inserts the value into the map using the provided key. If there is already a
  * value associated with this key, the old value will be overwritten with the new
  * one.
@@ -40,7 +40,7 @@ LimeValue kernel_nim(LimeStack stack);
 LimeValue kernel_put(LimeStack stack);
 
 /**
- * Expects a key, a value and a map as the three topmost values to be on stack.
+ * Expects a key, a value and a map as the three topmost values on the stack.
  * Fetches the value which is associated with the provided key from the map. If
  * there is no value associated with this key, the provided one is pushed on
  * the stack instead.
@@ -50,10 +50,10 @@ LimeValue kernel_put(LimeStack stack);
 LimeValue kernel_get(LimeStack stack);
 
 /**
- * Expects a key, a value and a map as the three topmost values to be on stack.
+ * Expects a key and a map as the two topmost values on the stack.
  * Deletes the value which is associated with the provided key from the map and
- * pushes it on the stack. If there was no value associated with this key, the
- * provided value is pushed on the stack instead.
+ * pushes the resulting map on the stack. If there was no value associated with 
+ * this key, the the provided map is pushed unchanged.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */

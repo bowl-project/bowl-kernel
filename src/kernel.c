@@ -190,37 +190,17 @@ LimeValue kernel_contains(LimeStack stack) {
         return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'list' or 'map')", lime_value_type(haystack), __FUNCTION__);
     }
 
-    LimeResult result = lime_boolean(stack, contains);
+    LIME_TRY(&needle, lime_boolean(stack, contains));
+    LIME_STACK_PUSH_VALUE(stack, needle);
 
-    if (result.failure) {
-        return result.exception;
-    }
-
-    result = lime_list(stack, result.value, *stack->datastack);
-
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    return NULL;
 }
 
 LimeValue kernel_nim(LimeStack stack) {
-    LimeResult result = lime_map(stack, 16);
-
-    if (result.failure) {
-        return result.exception;
-    }
-
-    result = lime_list(stack, result.value, *stack->datastack);
-
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    LimeValue map;
+    LIME_TRY(&map, lime_map(stack, 16));
+    LIME_STACK_PUSH_VALUE(stack, map);
+    return NULL;
 }
 
 LimeValue kernel_put(LimeStack stack) {
@@ -236,20 +216,9 @@ LimeValue kernel_put(LimeStack stack) {
         return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(map), __FUNCTION__);
     }
 
-    LimeResult result = lime_map_put(stack, map, key, value);
-
-    if (result.failure) {
-        return result.exception;
-    }
-
-    result = lime_list(stack, result.value, *stack->datastack);
-
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    LIME_TRY(&map, lime_map_put(stack, map, key, value));
+    LIME_STACK_PUSH_VALUE(stack, map);
+    return NULL;
 }
 
 LimeValue kernel_get(LimeStack stack) {
@@ -265,18 +234,54 @@ LimeValue kernel_get(LimeStack stack) {
         return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(map), __FUNCTION__);
     }
 
-    LimeResult result = lime_list(stack, lime_map_get_or_else(map, key, value), *stack->datastack);
+    LIME_STACK_PUSH_VALUE(stack, lime_map_get_or_else(map, key, value));
 
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
+    return NULL;
+}
+
+static LimeValue kernel_del_at(LimeStack stack, LimeValue map, u64 bucket, u64 index) {
+    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, map, NULL, NULL);
+
+    LIME_TRY(&frame.registers[0], lime_value_clone(&frame, frame.registers[0]));
+
+    frame.registers[1] = frame.registers[0]->map.buckets[bucket];
+    u64 current = 0;
+    while (frame.registers[1] != NULL) {
+        if (index != current) {
+            LIME_TRY(&frame.registers[2], lime_list(&frame, frame.registers[1]->list.tail->list.head, frame.registers[2]));
+            LIME_TRY(&frame.registers[2], lime_list(&frame, frame.registers[1]->list.head, frame.registers[2]));
+        }
+
+        frame.registers[1] = frame.registers[1]->list.tail->list.tail;
+        ++current;
     }
+
+    frame.registers[0]->map.buckets[bucket] = frame.registers[2];
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]);
+    return NULL;
 }
 
 LimeValue kernel_del(LimeStack stack) {
-    return lime_exception(stack, "'del' is not yet implemented");
+    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+    
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[1]);
+
+    const u64 index = lime_value_hash(frame.registers[0]) % frame.registers[1]->map.capacity;
+
+    frame.registers[2] = frame.registers[1]->map.buckets[index];
+    u64 current = 0;
+    while (frame.registers[2] != NULL) {
+        if (lime_value_equals(frame.registers[2]->list.head, frame.registers[0])) {
+            return kernel_del_at(&frame, frame.registers[1], index, current);
+        }
+
+        frame.registers[2] = frame.registers[2]->list.tail->list.tail;
+        ++current;
+    }
+
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+    return NULL;
 }
 
 LimeValue kernel_dup(LimeStack stack) {
@@ -284,99 +289,21 @@ LimeValue kernel_dup(LimeStack stack) {
         return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
     }
 
-    LimeResult result = lime_list(stack, (*stack->datastack)->list.head, *stack->datastack);
-
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    LIME_STACK_PUSH_VALUE(stack, (*stack->datastack)->list.head);
+    return NULL;
 }
 
 LimeValue kernel_type(LimeStack stack) {
     // static cache for type names
-
-    static struct lime_value symbol_type = {
-        .type = LimeStringValue,
-        .location = NULL,
-        .hash = 0,
-        .symbol = {
-            .length = 6,
-            .bytes = "symbol"
-        }
-    };
-
-    static struct lime_value list_type = {
-        .type = LimeStringValue,
-        .location = NULL,
-        .hash = 0,
-        .symbol = {
-            .length = 4,
-            .bytes = "list"
-        }
-    };
-
-    static struct lime_value native_type = {
-        .type = LimeStringValue,
-        .location = NULL,
-        .hash = 0,
-        .symbol = {
-            .length = 8,
-            .bytes = "function"
-        }
-    };
-
-    static struct lime_value map_type = {
-        .type = LimeStringValue,
-        .location = NULL,
-        .hash = 0,
-        .symbol = {
-            .length = 3,
-            .bytes = "map"
-        }
-    };
-
-    static struct lime_value boolean_type = {
-        .type = LimeStringValue,
-        .location = NULL,
-        .hash = 0,
-        .symbol = {
-            .length = 7,
-            .bytes = "boolean"
-        }
-    };
-
-    static struct lime_value number_type = {
-        .type = LimeStringValue,
-        .location = NULL,
-        .hash = 0,
-        .symbol = {
-            .length = 6,
-            .bytes = "number"
-        }
-    };
-
-    static struct lime_value string_type = {
-        .type = LimeStringValue,
-        .location = NULL,
-        .hash = 0,
-        .symbol = {
-            .length = 6,
-            .bytes = "string"
-        }
-    };
-
-    static struct lime_value library_type = {
-        .type = LimeStringValue,
-        .location = NULL,
-        .hash = 0,
-        .symbol = {
-            .length = 7,
-            .bytes = "library"
-        }
-    };
-
+    static struct lime_value symbol_type = LIME_STRING_STATIC_CONSTANT("symbol");
+    static struct lime_value list_type = LIME_STRING_STATIC_CONSTANT("list");
+    static struct lime_value native_type = LIME_STRING_STATIC_CONSTANT("function");
+    static struct lime_value map_type = LIME_STRING_STATIC_CONSTANT("map");
+    static struct lime_value boolean_type = LIME_STRING_STATIC_CONSTANT("boolean");
+    static struct lime_value number_type = LIME_STRING_STATIC_CONSTANT("number");
+    static struct lime_value string_type = LIME_STRING_STATIC_CONSTANT("string");
+    static struct lime_value library_type = LIME_STRING_STATIC_CONSTANT("library");
+  
     static LimeValue types[] = {
         [LimeSymbolValue]  = &symbol_type,
         [LimeListValue]    = &list_type,
@@ -389,18 +316,12 @@ LimeValue kernel_type(LimeStack stack) {
     };
     
     LimeValue value;
-
     LIME_STACK_POP_VALUE(stack, &value);
    
     const LimeValue type = value == NULL ? types[LimeListValue] : types[value->type];
-    const LimeResult result = lime_list(stack, type, *stack->datastack);
+    LIME_STACK_PUSH_VALUE(stack, type);
 
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    return NULL;
 }
 
 LimeValue kernel_hash(LimeStack stack) {
@@ -409,20 +330,10 @@ LimeValue kernel_hash(LimeStack stack) {
     LIME_STACK_POP_VALUE(stack, &value);
 
     const u64 hash = lime_value_hash(value);
-    LimeResult result = lime_number(stack, (double) hash);
+    LIME_TRY(&value, lime_number(stack, (double) hash));
 
-    if (result.failure) {
-        return result.exception;
-    }
-
-    result = lime_list(stack, result.value, *stack->datastack);
-
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    LIME_STACK_PUSH_VALUE(stack, value);
+    return NULL;
 }
 
 LimeValue kernel_equals(LimeStack stack) {
@@ -433,19 +344,10 @@ LimeValue kernel_equals(LimeStack stack) {
     LIME_STACK_POP_VALUE(stack, &a);
 
     const bool equals = lime_value_equals(a, b);
-    LimeResult result = lime_boolean(stack, equals);
+    LIME_TRY(&a, lime_boolean(stack, equals));
 
-    if (result.failure) {
-        return result.exception;
-    }
-
-    result = lime_list(stack, result.value, *stack->datastack);
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    LIME_STACK_PUSH_VALUE(stack, a);
+    return NULL;
 }
 
 LimeValue kernel_show(LimeStack stack) {
@@ -468,13 +370,8 @@ LimeValue kernel_show(LimeStack stack) {
         return result.exception;
     }
 
-    result = lime_list(stack, result.value, *stack->datastack);
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    LIME_STACK_PUSH_VALUE(stack, result.value);
+    return NULL;
 }
 
 LimeValue kernel_throw(LimeStack stack) {
@@ -494,36 +391,17 @@ LimeValue kernel_length(LimeStack stack) {
         case LimeStringValue:
         case LimeListValue:
         case LimeMapValue:
-            {
-                LimeResult result = lime_number(stack, (double) length);
-                    
-                if (result.failure) {
-                    return result.exception;
-                }
-
-                result = lime_list(stack, result.value, *stack->datastack);
-
-                if (result.failure) {
-                    return result.exception;
-                } else {
-                    *stack->datastack = result.value;
-                    return NULL;   
-                }
-            }
+            LIME_TRY(&value, lime_number(stack, (double) length));
+            LIME_STACK_PUSH_VALUE(stack, value);
+            return NULL;
         default:
             return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'list', 'string', 'symbol' or 'map')", lime_value_type(value), __FUNCTION__);
     }
 }
 
 LimeValue kernel_nil(LimeStack stack) {
-    LimeResult result = lime_list(stack, NULL, *stack->datastack);
-    
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    LIME_STACK_PUSH_VALUE(stack, NULL);
+    return NULL;
 }
 
 LimeValue kernel_push(LimeStack stack) {
@@ -537,18 +415,9 @@ LimeValue kernel_push(LimeStack stack) {
         return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(tail), __FUNCTION__);
     }
 
-    LimeResult result = lime_list(stack, head, tail);
-    if (result.failure) {
-        return result.exception;
-    }
-
-    result = lime_list(stack, result.value, *stack->datastack);
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    LIME_TRY(&head, lime_list(stack, head, tail));
+    LIME_STACK_PUSH_VALUE(stack, head);
+    return NULL;
 }
 
 LimeValue kernel_pop(LimeStack stack) {
@@ -564,20 +433,10 @@ LimeValue kernel_pop(LimeStack stack) {
         return lime_exception(&frame, "illegal argument (empty list) provided in function '%s'", __FUNCTION__);
     }
 
-    LimeResult result = lime_list(&frame, frame.registers[0]->list.tail, *frame.datastack);
-    
-    if (result.failure) {
-        return result.exception;
-    }
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]->list.tail);
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]->list.head);
 
-    result = lime_list(&frame, frame.registers[0]->list.head, result.value);
-
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *frame.datastack = result.value;
-        return NULL;
-    }
+    return NULL;
 }
 
 LimeValue kernel_library(LimeStack stack) {
@@ -601,13 +460,8 @@ LimeValue kernel_library(LimeStack stack) {
         return result.exception;
     }
 
-    result = lime_list(stack, result.value, *stack->datastack);
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    LIME_STACK_PUSH_VALUE(stack, result.value);
+    return NULL;
 }
 
 LimeValue kernel_native(LimeStack stack) {
@@ -646,18 +500,10 @@ LimeValue kernel_native(LimeStack stack) {
     
     free(symbol_name);
 
-    LimeResult result = lime_function(stack, library, function);
-    if (result.failure) {
-        return result.exception;
-    }
+    LIME_TRY(&symbol, lime_function(stack, library, function));
+    LIME_STACK_PUSH_VALUE(stack, symbol);
 
-    result = lime_list(stack, result.value, *stack->datastack);
-    if (result.failure) {
-        return result.exception;
-    } else {
-        *stack->datastack = result.value;
-        return NULL;
-    }
+    return NULL;
 }
 
 LimeValue kernel_run(LimeStack stack) {
