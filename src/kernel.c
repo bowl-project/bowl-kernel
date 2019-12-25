@@ -592,9 +592,11 @@ LimeValue kernel_run(LimeStack stack) {
                 break;
         }
 
-        lime_value_dump(stdout, datastack);
-        fputc('\n', stdout); 
-        fflush(stdout);
+        if (lime_settings_verbosity > 0) {
+            lime_value_dump(stdout, datastack);
+            fputc('\n', stdout); 
+            fflush(stdout);
+        }
     }
 
     return NULL;
