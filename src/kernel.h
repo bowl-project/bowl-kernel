@@ -81,4 +81,18 @@ LimeValue kernel_native(LimeStack stack);
  */
 LimeValue kernel_run(LimeStack stack);
 
+/**
+ * Lifts the current continuation on the datastack.
+ * @param stack The stack of the current environment.
+ * @return Either 'NULL' in case of a success or the exception value.
+ */
+LimeValue kernel_lift(LimeStack stack);
+
+/**
+ * Continues with the continuation which resides on the stack.
+ * @param stack The stack of the current environment.
+ * @return Either 'NULL' in case of a success or the exception value.
+ */
+LimeValue kernel_continue(LimeStack stack);
+
 #endif

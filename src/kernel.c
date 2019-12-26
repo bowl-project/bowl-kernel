@@ -8,6 +8,8 @@ static KernelFunctionEntry kernel_functions[] = {
     { .name = "equals", .function = kernel_equals },
     { .name = "show", .function = kernel_show },
     { .name = "throw", .function = kernel_throw },
+    { .name = "lift", .function = kernel_lift },
+    { .name = "continue", .function = kernel_continue },
     { .name = "library", .function = kernel_library },
     { .name = "native", .function = kernel_native },
 
@@ -322,5 +324,37 @@ LimeValue kernel_run(LimeStack stack) {
         }
     }
 
+    return NULL;
+}
+
+LimeValue kernel_lift(LimeStack stack) {
+    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, *stack->datastack, NULL, NULL);
+    
+    *frame.datastack = NULL;
+    LIME_STACK_PUSH_VALUE(&frame, *frame.dictionary);
+    LIME_STACK_PUSH_VALUE(&frame, *frame.callstack);
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]);
+    
+    return NULL;
+}
+
+LimeValue kernel_continue(LimeStack stack) {
+    LimeValue datastack;
+    LimeValue callstack;
+    LimeValue dictionary;
+
+    LIME_STACK_POP_VALUE(stack, &datastack);
+    LIME_ASSERT_TYPE(datastack, LimeListValue);
+
+    LIME_STACK_POP_VALUE(stack, &callstack);
+    LIME_ASSERT_TYPE(datastack, LimeListValue);
+
+    LIME_STACK_POP_VALUE(stack, &dictionary);
+    LIME_ASSERT_TYPE(datastack, LimeMapValue);
+
+    *stack->datastack = datastack;
+    *stack->callstack = callstack;
+    *stack->dictionary = dictionary;
+    
     return NULL;
 }
