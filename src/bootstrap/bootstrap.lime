@@ -1,0 +1,120 @@
+lift
+    rot rot
+    "register-definition" string:symbol
+    "lift swap rot dup rot list:pop rot list:pop swap drop rot rot list:reverse map:put rot swap dup list:length 27 number:subtract 27 list:slice swap list:pop drop list:pop drop continue" 
+    tokens list:reverse
+    map:put
+    rot
+    swap dup list:length 18 number:subtract 18 list:slice swap
+continue
+
+"quote" string:symbol
+"lift swap dup list:length 12 number:subtract 12 list:slice list:pop swap rot list:push continue" tokens
+register-definition
+
+quote register-value
+"lift swap rot dup rot list:pop rot list:pop swap drop rot rot map:put rot swap dup list:length 26 number:subtract 26 list:slice swap list:pop drop list:pop drop continue" tokens
+register-definition
+
+quote apply
+"lift list:pop rot rot dup list:length 12 number:subtract 12 list:slice list:concat swap continue" tokens
+register-definition
+
+quote call  
+"lift list:pop rot rot dup list:length 13 number:subtract 13 list:slice swap list:push swap continue" tokens
+register-definition
+
+quote if
+"boolean:choose apply" tokens
+register-definition
+
+quote parse-symbol-closing-bracket quote ] register-value
+quote parse-symbol-closing-paren quote ) register-value
+quote parse-symbol-closing-curly quote } register-value
+quote parse-symbol-closing-comment quote */ register-value
+quote parse-symbol-dot quote . register-value
+
+quote parse-jump-table
+map:empty 
+quote [ quote parse-list map:put
+quote ( quote parse-tuple map:put
+quote { quote parse-map map:put
+quote /* quote parse-comment map:put
+quote define quote parse-define map:put
+register-value
+
+quote parse
+"... tokens  -- ... result rest" drop
+"list:pop dup parse-jump-table swap \"parse-skip\" string:symbol map:get call" tokens
+register-definition
+
+quote parse-until
+"... accumulator tokens symbol -- ... accumulator rest" drop
+"swap list:pop swap rot dup rot swap dup rot equals" tokens
+"drop drop swap list:reverse swap" tokens
+"rot list:push parse swap list:push swap rot list:pop swap rot list:push rot swap parse-until" tokens
+"if" tokens swap list:push swap list:push list:concat
+register-definition
+
+quote parse-list
+"... tokens [ -- ... result rest" drop
+"drop list:empty swap parse-symbol-closing-bracket parse-until" tokens
+register-definition
+
+quote parse-tuple
+"... tokens ( -- ... result rest" drop
+"drop \"not yet implemented\" throw" tokens
+register-definition
+
+quote parse-map
+"... tokens { -- ... result rest" drop
+"drop \"not yet implemented\" throw" tokens
+register-definition
+
+quote parse-comment
+"... tokens /* -- ... result rest" drop
+"drop list:empty swap parse-symbol-closing-comment parse-until swap drop parse" tokens
+register-definition
+
+quote parse-definition
+"dup list:empty equals" tokens
+"\"syntax error (expected definition name but got '.')\" throw" tokens
+"list:pop swap register-definition" tokens
+"if" tokens swap list:push swap list:push list:concat 
+register-definition
+
+quote parse-define
+"... tokens define -- ... result rest" drop
+"drop list:empty swap parse-symbol-dot parse-until swap parse-definition parse" tokens
+register-definition
+
+quote parse-skip
+"... tokens anything -- ... anything tokens" drop
+"swap" tokens
+register-definition
+
+quote parse-all
+"... accumulator tokens -- ... accumulator" drop
+"dup list:empty equals" tokens
+"drop list:reverse" tokens
+"parse rot list:push swap parse-all" tokens
+"if" tokens swap list:push swap list:push list:concat
+register-definition
+
+quote dictionary
+"lift swap dup list:length 16 number:subtract 16 list:slice swap rot rot dup rot list:push swap rot continue" tokens
+register-definition
+
+lift swap dup list:length 17 number:subtract 17 list:slice list:empty swap parse-all swap rot rot drop dictionary rot continue
+
+/* This is a comment. */
+define HELLO 42 .
+
+define fibonacci
+    dup 0 equals
+    [ drop 1 ]
+    [ dup 1 number:subtract fibonacci number:multiply ]
+    if
+.
+
+120 fibonacci throw

@@ -12,6 +12,10 @@ static KernelFunctionEntry kernel_functions[] = {
     { .name = "continue", .function = kernel_continue },
     { .name = "library", .function = kernel_library },
     { .name = "native", .function = kernel_native },
+    { .name = "tokens", .function = kernel_tokens },
+    { .name = "swap", .function = kernel_swap },
+    { .name = "rot", .function = kernel_rot },
+    { .name = "drop", .function = kernel_drop },
 
     { .name = "list:length", .function = kernel_list_length },
     { .name = "list:empty", .function = kernel_list_empty },
@@ -19,6 +23,8 @@ static KernelFunctionEntry kernel_functions[] = {
     { .name = "list:pop", .function = kernel_list_pop },
     { .name = "list:concat", .function = kernel_list_concat },
     { .name = "list:contains", .function = kernel_list_contains },
+    { .name = "list:slice", .function = kernel_list_slice },
+    { .name = "list:reverse", .function = kernel_list_reverse },
 
     { .name = "map:length", .function = kernel_map_length },
     { .name = "map:empty", .function = kernel_map_empty },
@@ -33,11 +39,16 @@ static KernelFunctionEntry kernel_functions[] = {
     { .name = "number:multiply", .function = kernel_number_multiply },
     { .name = "number:divide", .function = kernel_number_divide },
     { .name = "number:remainder", .function = kernel_number_remainder },
-
+    { .name = "number:less-than", .function = kernel_number_less_than },
+    { .name = "number:less-equal", .function = kernel_number_less_equal },
+    { .name = "number:greater-than", .function = kernel_number_greater_than },
+    { .name = "number:greater-equal", .function = kernel_number_greater_equal },
+    
     { .name = "boolean:and", .function = kernel_boolean_and },
     { .name = "boolean:or", .function = kernel_boolean_or },
     { .name = "boolean:xor", .function = kernel_boolean_xor },
     { .name = "boolean:not", .function = kernel_boolean_not },
+    { .name = "boolean:choose", .function = kernel_boolean_choose },
 
     { .name = "string:length", .function = kernel_string_length },
     { .name = "string:concat", .function = kernel_string_concat },
@@ -259,9 +270,22 @@ LimeValue kernel_run(LimeStack stack) {
     }
 
     LimeResult result;
+
+    LimeValue exception = NULL;
     while (callstack != NULL) {
         const LimeValue instruction = callstack->list.head;
         callstack = callstack->list.tail;
+
+        if (lime_settings_verbosity > 0) {
+            fputc('\n', stdout); 
+        }
+
+        if (lime_settings_verbosity > 1) {
+            printf("[instruction] ");
+            lime_value_dump(stdout, instruction);
+            fputc('\n', stdout);
+            fflush(stdout);
+        }
 
         switch (instruction == NULL ? LimeListValue : instruction->type) {
             case LimeSymbolValue:
@@ -273,7 +297,8 @@ LimeValue kernel_run(LimeStack stack) {
                         result = lime_list(&frame, instruction, datastack);
 
                         if (result.failure) {
-                            return result.exception;
+                            exception = result.exception;
+                            goto exception_break_point;
                         }
 
                         datastack = result.value;
@@ -283,7 +308,8 @@ LimeValue kernel_run(LimeStack stack) {
                             result = lime_list(&frame, frame.registers[0]->list.head, callstack);
 
                             if (result.failure) {
-                                return result.exception;
+                                exception = result.exception;
+                                goto exception_break_point;
                             }
 
                             callstack = result.value;
@@ -291,15 +317,16 @@ LimeValue kernel_run(LimeStack stack) {
                         }
                     } else if (frame.registers[0]->type == LimeNativeValue) {
                         const LimeFunction function = frame.registers[0]->function.function;
-                        const LimeValue exception = function(&frame);
+                        exception = function(&frame);
                         if (exception != NULL) {
-                            return exception;
+                            goto exception_break_point;    
                         }
                     } else {
                         result = lime_list(&frame, frame.registers[0], callstack);
 
                         if (result.failure) {
-                            return result.exception;
+                            exception = result.exception;
+                            goto exception_break_point;
                         }
 
                         callstack = result.value;
@@ -310,7 +337,8 @@ LimeValue kernel_run(LimeStack stack) {
                 result = lime_list(&frame, instruction, datastack);
 
                 if (result.failure) {
-                    return result.exception;
+                    exception = result.exception;
+                    goto exception_break_point;
                 }
 
                 datastack = result.value;
@@ -319,10 +347,25 @@ LimeValue kernel_run(LimeStack stack) {
 
         if (lime_settings_verbosity > 0) {
             lime_value_dump(stdout, datastack);
-            fputc('\n', stdout); 
+            fputc('\n', stdout);
             fflush(stdout);
         }
     }
+
+    exception_break_point:
+    // restore the stacks and the dictionary of the previous instance
+    frame.datastack = stack->datastack;
+    frame.callstack = stack->callstack;
+    frame.dictionary = stack->dictionary;
+
+    // save the stacks and the dictionary of this run
+    frame.registers[0] = datastack;
+    frame.registers[1] = exception;
+    frame.registers[2] = dictionary;
+
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[2]);
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]);
 
     return NULL;
 }
@@ -347,14 +390,55 @@ LimeValue kernel_continue(LimeStack stack) {
     LIME_ASSERT_TYPE(datastack, LimeListValue);
 
     LIME_STACK_POP_VALUE(stack, &callstack);
-    LIME_ASSERT_TYPE(datastack, LimeListValue);
+    LIME_ASSERT_TYPE(callstack, LimeListValue);
 
     LIME_STACK_POP_VALUE(stack, &dictionary);
-    LIME_ASSERT_TYPE(datastack, LimeMapValue);
+    LIME_ASSERT_TYPE(dictionary, LimeMapValue);
 
     *stack->datastack = datastack;
     *stack->callstack = callstack;
     *stack->dictionary = dictionary;
     
+    return NULL;
+}
+
+LimeValue kernel_tokens(LimeStack stack) {
+    LimeValue string;
+
+    LIME_STACK_POP_VALUE(stack, &string);
+    LIME_TRY(&string, lime_tokens(stack, string));
+    LIME_STACK_PUSH_VALUE(stack, string);
+    
+    return NULL;
+}
+
+LimeValue kernel_swap(LimeStack stack) {
+    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[1]);
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]);
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+
+    return NULL;
+}
+
+LimeValue kernel_rot(LimeStack stack) {
+    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[1]);
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[2]);
+
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]);
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[2]);
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+
+    return NULL;
+}
+
+LimeValue kernel_drop(LimeStack stack) {
+    LimeValue value;
+    LIME_STACK_POP_VALUE(stack, &value);
     return NULL;
 }

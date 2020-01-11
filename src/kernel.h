@@ -15,6 +15,34 @@ typedef struct {
 } KernelFunctionEntry;
 
 /**
+ * Tokenizes the topmost value on the stack and pushes the resulting list.
+ * @param stack The stack of the current environment.
+ * @return Either 'NULL' in case of a success or the exception value.
+ */
+LimeValue kernel_tokens(LimeStack stack);
+
+/**
+ * Swaps the two topmost elements on the stack.
+ * @param stack The stack of the current environment.
+ * @return Either 'NULL' in case of a success or the exception value.
+ */
+LimeValue kernel_swap(LimeStack stack);
+
+/**
+ * Rotates the three topmost elements on the stack.
+ * @param stack The stack of the current environment.
+ * @return Either 'NULL' in case of a success or the exception value.
+ */
+LimeValue kernel_rot(LimeStack stack);
+
+/**
+ * Drops the topmost element off the stack.
+ * @param stack The stack of the current environment.
+ * @return Either 'NULL' in case of a success or the exception value.
+ */
+LimeValue kernel_drop(LimeStack stack);
+
+/**
  * Pushes two copies of the topmost value on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.

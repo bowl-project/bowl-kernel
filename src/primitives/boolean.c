@@ -51,3 +51,22 @@ LimeValue kernel_boolean_not(LimeStack stack) {
 
     return NULL;
 }
+
+LimeValue kernel_boolean_choose(LimeStack stack) {
+    LimeValue a;
+    LimeValue b;
+    LimeValue boolean;
+
+    LIME_STACK_POP_VALUE(stack, &b);
+    LIME_STACK_POP_VALUE(stack, &a);
+    LIME_STACK_POP_VALUE(stack, &boolean);
+    LIME_ASSERT_TYPE(boolean, LimeBooleanValue);
+
+    if (boolean->boolean.value) {
+        LIME_STACK_PUSH_VALUE(stack, a);
+    } else {
+        LIME_STACK_PUSH_VALUE(stack, b);
+    }
+
+    return NULL;
+}

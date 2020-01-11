@@ -37,11 +37,11 @@ LimeValue kernel_string_slice(LimeStack stack) {
     LimeValue start;
     LimeValue length;
 
-    LIME_STACK_POP_VALUE(&frame, &length);
-    LIME_ASSERT_TYPE(length, LimeNumberValue);
-
     LIME_STACK_POP_VALUE(&frame, &start);
     LIME_ASSERT_TYPE(start, LimeNumberValue);
+
+    LIME_STACK_POP_VALUE(&frame, &length);
+    LIME_ASSERT_TYPE(length, LimeNumberValue);
 
     LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
     LIME_ASSERT_TYPE(frame.registers[0], LimeStringValue);
@@ -54,7 +54,7 @@ LimeValue kernel_string_slice(LimeStack stack) {
     }
 
     if (start_index < 0 || start_index > frame.registers[0]->string.length) {
-        return lime_exception(&frame, "index out of bounds in function '%s' (expected index to be positive and smaller than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, frame.registers[0]->string.length, start_index);
+        return lime_exception(&frame, "index out of bounds in function '%s' (expected index to be positive and not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, frame.registers[0]->string.length, start_index);
     }
 
     if (start_index + slice_length > frame.registers[0]->string.length) {

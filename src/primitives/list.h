@@ -15,4 +15,8 @@ LimeValue kernel_list_concat(LimeStack stack);
 
 LimeValue kernel_list_contains(LimeStack stack);
 
+LimeValue kernel_list_slice(LimeStack stack);
+
+LimeValue kernel_list_reverse(LimeStack stack);
+
 #endif

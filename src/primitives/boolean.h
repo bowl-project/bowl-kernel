@@ -11,4 +11,6 @@ LimeValue kernel_boolean_xor(LimeStack stack);
 
 LimeValue kernel_boolean_not(LimeStack stack);
 
+LimeValue kernel_boolean_choose(LimeStack stack);
+
 #endif
