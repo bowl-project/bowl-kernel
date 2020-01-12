@@ -110,11 +110,20 @@ lift swap dup list:length 17 number:subtract 17 list:slice list:empty swap parse
 /* This is a comment. */
 define HELLO 42 .
 
-define fibonacci
+define factorial
     dup 0 equals
     [ drop 1 ]
-    [ dup 1 number:subtract fibonacci number:multiply ]
+    [ dup 1 number:subtract factorial number:multiply ]
     if
 .
 
-120 fibonacci throw
+define fibonacci 
+    define fibonacci-helper 
+        /* ... prev=0 next=1 n -- n */
+        dup 0 equals
+        [ drop drop ]
+        [ 1 number:subtract rot dup rot number:add rot rot fibonacci-helper ]
+        if
+    .
+    0 1 rot rot fibonacci-helper 
+.
