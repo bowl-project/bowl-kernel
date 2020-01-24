@@ -37,7 +37,7 @@ LimeValue kernel_list_pop(LimeStack stack) {
     LIME_ASSERT_TYPE(frame.registers[0], LimeListValue);
 
     if (frame.registers[0] == NULL) {
-        return lime_exception(&frame, "empty list provided in function '%s'", __FUNCTION__);
+        return lime_format_exception(&frame, "empty list provided in function '%s'", __FUNCTION__).value;
     }
 
     LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]->list.tail);
@@ -112,15 +112,15 @@ LimeValue kernel_list_slice(LimeStack stack) {
     const u64 list_length = frame.registers[0] == NULL ? 0 : frame.registers[0]->list.length;
 
     if (slice_length < 0) {
-        return lime_exception(&frame, "length must be positive in function '%s' (%" PRId64 " was given)", __FUNCTION__, slice_length);
+        return lime_format_exception(&frame, "length must be positive in function '%s' (%" PRId64 " was given)", __FUNCTION__, slice_length).value;
     }
 
     if (start_index < 0 || start_index > list_length) {
-        return lime_exception(&frame, "index out of bounds in function '%s' (expected index to be positive and not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, list_length, start_index);
+        return lime_format_exception(&frame, "index out of bounds in function '%s' (expected index to be positive and not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, list_length, start_index).value;
     }
 
     if (start_index + slice_length > list_length) {
-        return lime_exception(&frame, "length exceeds string bounds in function '%s' (expected length to be not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, list_length - start_index, slice_length);
+        return lime_format_exception(&frame, "length exceeds string bounds in function '%s' (expected length to be not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, list_length - start_index, slice_length).value;
     }
 
     // skip the start

@@ -8,6 +8,8 @@
 #include "primitives/number.h"
 #include "primitives/string.h"
 #include "primitives/symbol.h"
+#include "primitives/vector.h"
+#include "primitives/exception.h"
 
 typedef struct {
     char *name;
@@ -78,11 +80,11 @@ LimeValue kernel_equals(LimeStack stack);
 LimeValue kernel_show(LimeStack stack);
 
 /**
- * Throws the topmost value as an exception.
+ * Triggers an exception by throwing the topmost value of the stack.
  * @param stack The stack of the current environment.
- * @return This function always returns the thrown exception.
+ * @return This function always returns the triggered exception.
  */
-LimeValue kernel_throw(LimeStack stack);
+LimeValue kernel_trigger(LimeStack stack);
 
 /**
  * Pushes a library value denoted by topmost path value on the stack.

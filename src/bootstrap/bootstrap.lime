@@ -63,12 +63,12 @@ register-definition
 
 quote parse-tuple
 "... tokens ( -- ... result rest" drop
-"drop \"not yet implemented\" throw" tokens
+"drop \"not yet implemented\" exception trigger" tokens
 register-definition
 
 quote parse-map
 "... tokens { -- ... result rest" drop
-"drop \"not yet implemented\" throw" tokens
+"drop \"not yet implemented\" exception trigger" tokens
 register-definition
 
 quote parse-comment
@@ -78,7 +78,7 @@ register-definition
 
 quote parse-definition
 "dup list:empty equals" tokens
-"\"syntax error (expected definition name but got '.')\" throw" tokens
+"\"syntax error (expected definition name but got '.')\" exception trigger" tokens
 "list:pop swap register-definition" tokens
 "if" tokens swap list:push swap list:push list:concat 
 register-definition
@@ -127,3 +127,11 @@ define fibonacci
     .
     0 1 rot rot fibonacci-helper 
 .
+
+define datastack
+    lift dup list:push swap dup list:length 11 number:subtract 11 list:slice swap continue
+.
+
+define io:println io:print "\n" io:print .
+
+42 "hello world" vector:fill exception trigger

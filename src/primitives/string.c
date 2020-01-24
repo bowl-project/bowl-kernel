@@ -50,15 +50,15 @@ LimeValue kernel_string_slice(LimeStack stack) {
     const s64 slice_length = (s64) length->number.value;
 
     if (slice_length < 0) {
-        return lime_exception(&frame, "length must be positive in function '%s' (%" PRId64 " was given)", __FUNCTION__, slice_length);
+        return lime_format_exception(&frame, "length must be positive in function '%s' (%" PRId64 " was given)", __FUNCTION__, slice_length).value;
     }
 
     if (start_index < 0 || start_index > frame.registers[0]->string.length) {
-        return lime_exception(&frame, "index out of bounds in function '%s' (expected index to be positive and not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, frame.registers[0]->string.length, start_index);
+        return lime_format_exception(&frame, "index out of bounds in function '%s' (expected index to be positive and not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, frame.registers[0]->string.length, start_index).value;
     }
 
     if (start_index + slice_length > frame.registers[0]->string.length) {
-        return lime_exception(&frame, "length exceeds string bounds in function '%s' (expected length to be not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, frame.registers[0]->string.length - start_index, slice_length);
+        return lime_format_exception(&frame, "length exceeds string bounds in function '%s' (expected length to be not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, frame.registers[0]->string.length - start_index, slice_length).value;
     }
 
     LIME_TRY(&frame.registers[1], lime_allocate(&frame, LimeStringValue, slice_length));
@@ -79,7 +79,7 @@ LimeValue kernel_string_number(LimeStack stack) {
 
     if (string->string.length > sizeof(content) / sizeof(content[0])) {
         // no number is larger than the size of the buffer, i.e. the string cannot be well-formed
-        return lime_exception(stack, "illegal format in function '%s' (expected numeric string)", __FUNCTION__);
+        return lime_format_exception(stack, "illegal format in function '%s' (expected numeric string)", __FUNCTION__).value;
     }
 
     memcpy(&content[0], &string->string.bytes[0], string->string.length);
@@ -89,7 +89,7 @@ LimeValue kernel_string_number(LimeStack stack) {
 
     const double result = strtod(start, &end);
     if (end - start != string->string.length) {
-        return lime_exception(stack, "illegal format in function '%s' (expected numeric string)", __FUNCTION__);
+        return lime_format_exception(stack, "illegal format in function '%s' (expected numeric string)", __FUNCTION__).value;
     }
 
     LIME_TRY(&string, lime_number(stack, result));
@@ -110,7 +110,7 @@ LimeValue kernel_string_boolean(LimeStack stack) {
     } else if (string->string.length == sizeof("false") - 1 && memcmp(string->string.bytes, "false", sizeof("false") - 1) == 0) {
         value = false;
     } else {
-        return lime_exception(stack, "illegal format in function '%s' (expected either 'true' or 'false')", __FUNCTION__);
+        return lime_format_exception(stack, "illegal format in function '%s' (expected either 'true' or 'false')", __FUNCTION__).value;
     }
 
     LIME_TRY(&string, lime_boolean(stack, value));
@@ -129,7 +129,7 @@ LimeValue kernel_string_symbol(LimeStack stack) {
     u8 *const bytes = &frame.registers[0]->string.bytes[0];
     for (u64 i = 0; i < length; ++i) {
         if (isspace(bytes[i])) {
-            return lime_exception(&frame, "illegal format in function '%s' (a symbol may not contain whitespace)", __FUNCTION__);
+            return lime_format_exception(&frame, "illegal format in function '%s' (a symbol may not contain whitespace)", __FUNCTION__).value;
         }
     }
 

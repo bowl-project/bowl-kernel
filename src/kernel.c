@@ -7,7 +7,8 @@ static KernelFunctionEntry kernel_functions[] = {
     { .name = "hash", .function = kernel_hash },
     { .name = "equals", .function = kernel_equals },
     { .name = "show", .function = kernel_show },
-    { .name = "throw", .function = kernel_throw },
+    { .name = "trigger", .function = kernel_trigger },
+    { .name = "exception", .function = kernel_exception },
     { .name = "lift", .function = kernel_lift },
     { .name = "continue", .function = kernel_continue },
     { .name = "library", .function = kernel_library },
@@ -57,7 +58,13 @@ static KernelFunctionEntry kernel_functions[] = {
     { .name = "string:boolean", .function = kernel_string_boolean },
     { .name = "string:symbol", .function = kernel_string_symbol },
 
-    { .name = "symbol:length", .function = kernel_symbol_length }
+    { .name = "symbol:length", .function = kernel_symbol_length },
+
+    { .name = "vector:empty", .function = kernel_vector_empty },
+    { .name = "vector:fill", .function = kernel_vector_fill },
+    { .name = "vector:length", .function = kernel_vector_length },
+    { .name = "vector:concat", .function = kernel_vector_concat },
+    { .name = "vector:slice", .function = kernel_vector_slice }
 };
 
 LimeValue lime_module_initialize(LimeStack stack, LimeValue library) {
@@ -81,7 +88,7 @@ LimeValue lime_module_finalize(LimeStack stack, LimeValue library) {
 
 LimeValue kernel_dup(LimeStack stack) {
     if (*stack->datastack == NULL) {
-        return lime_exception(stack, "stack underflow in function '%s'", __FUNCTION__);
+        return lime_format_exception(stack, "stack underflow in function '%s'", __FUNCTION__).value;
     }
 
     LIME_STACK_PUSH_VALUE(stack, (*stack->datastack)->list.head);
@@ -89,25 +96,28 @@ LimeValue kernel_dup(LimeStack stack) {
 }
 
 LimeValue kernel_type(LimeStack stack) {
-    // static cache for type names
-    static struct lime_value symbol_type = LIME_STRING_STATIC_CONSTANT("symbol");
-    static struct lime_value list_type = LIME_STRING_STATIC_CONSTANT("list");
-    static struct lime_value native_type = LIME_STRING_STATIC_CONSTANT("function");
-    static struct lime_value map_type = LIME_STRING_STATIC_CONSTANT("map");
-    static struct lime_value boolean_type = LIME_STRING_STATIC_CONSTANT("boolean");
-    static struct lime_value number_type = LIME_STRING_STATIC_CONSTANT("number");
-    static struct lime_value string_type = LIME_STRING_STATIC_CONSTANT("string");
-    static struct lime_value library_type = LIME_STRING_STATIC_CONSTANT("library");
+    LIME_STATIC_STRING(symbol_type, "symbol");
+    LIME_STATIC_STRING(list_type, "list");
+    LIME_STATIC_STRING(function_type, "function");
+    LIME_STATIC_STRING(map_type, "map");
+    LIME_STATIC_STRING(boolean_type, "boolean");
+    LIME_STATIC_STRING(number_type, "number");
+    LIME_STATIC_STRING(string_type, "string");
+    LIME_STATIC_STRING(library_type, "library");
+    LIME_STATIC_STRING(vector_type, "vector");
+    LIME_STATIC_STRING(exception_type, "exception");
   
     static LimeValue types[] = {
-        [LimeSymbolValue]  = &symbol_type,
-        [LimeListValue]    = &list_type,
-        [LimeNativeValue]  = &native_type,
-        [LimeMapValue]     = &map_type,
-        [LimeBooleanValue] = &boolean_type,
-        [LimeNumberValue]  = &number_type,
-        [LimeStringValue]  = &string_type,
-        [LimeLibraryValue] = &library_type
+        [LimeSymbolValue]    = &symbol_type.value,
+        [LimeListValue]      = &list_type.value,
+        [LimeNativeValue]    = &function_type.value,
+        [LimeMapValue]       = &map_type.value,
+        [LimeBooleanValue]   = &boolean_type.value,
+        [LimeNumberValue]    = &number_type.value,
+        [LimeStringValue]    = &string_type.value,
+        [LimeLibraryValue]   = &library_type.value,
+        [LimeVectorValue]    = &vector_type.value,
+        [LimeExceptionValue] = &exception_type.value
     };
     
     LimeValue value;
@@ -169,9 +179,12 @@ LimeValue kernel_show(LimeStack stack) {
     return NULL;
 }
 
-LimeValue kernel_throw(LimeStack stack) {
+LimeValue kernel_trigger(LimeStack stack) {
     LimeValue value;
+    
     LIME_STACK_POP_VALUE(stack, &value);
+    LIME_ASSERT_TYPE(value, LimeExceptionValue);
+
     return value;
 }
 
@@ -181,7 +194,7 @@ LimeValue kernel_library(LimeStack stack) {
     LIME_STACK_POP_VALUE(stack, &value);
 
     if (value == NULL || value->type != LimeStringValue) {
-        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", lime_value_type(value), __FUNCTION__);
+        return lime_format_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", lime_value_type(value), __FUNCTION__).value;
     }
 
     char *path = lime_string_to_null_terminated(value);
@@ -208,11 +221,11 @@ LimeValue kernel_native(LimeStack stack) {
     LIME_STACK_POP_VALUE(stack, &library);
 
     if (symbol == NULL || symbol->type != LimeStringValue) {
-        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", lime_value_type(symbol), __FUNCTION__);
+        return lime_format_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", lime_value_type(symbol), __FUNCTION__).value;
     }
 
     if (library == NULL || library->type != LimeLibraryValue) {
-        return lime_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'library')", lime_value_type(library), __FUNCTION__);
+        return lime_format_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'library')", lime_value_type(library), __FUNCTION__).value;
     }
 
     char *const symbol_name = lime_string_to_null_terminated(symbol);
@@ -229,7 +242,7 @@ LimeValue kernel_native(LimeStack stack) {
     #endif
 
     if (function == NULL) {
-        const LimeValue exception = lime_exception(stack, "failed to load native function '%s' from library in function '%s'", symbol_name, __FUNCTION__);
+        const LimeValue exception = lime_format_exception(stack, "failed to load native function '%s' from library in function '%s'", symbol_name, __FUNCTION__).value;
         free(symbol_name);
         return exception;
     }
@@ -258,15 +271,15 @@ LimeValue kernel_run(LimeStack stack) {
     frame.dictionary = &dictionary;
 
     if (datastack != NULL && datastack->type != LimeListValue) {
-        return lime_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(datastack), __FUNCTION__);
+        return lime_format_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(datastack), __FUNCTION__).value;
     }
 
     if (callstack != NULL && callstack->type != LimeListValue) {
-        return lime_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(callstack), __FUNCTION__);
+        return lime_format_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(callstack), __FUNCTION__).value;
     }
 
     if (dictionary == NULL || dictionary->type != LimeMapValue) {
-        return lime_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(dictionary), __FUNCTION__);
+        return lime_format_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(dictionary), __FUNCTION__).value;
     }
 
     LimeResult result;
