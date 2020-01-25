@@ -134,4 +134,9 @@ define datastack
 
 define io:println io:print "\n" io:print .
 
-42 "hello world" vector:fill exception trigger
+define throw exception trigger .
+
+( 1 2 3 4 5 ) vector:reverse show io:println
+
+42 "hello world" vector:fill throw
+

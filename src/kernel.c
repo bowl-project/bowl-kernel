@@ -66,7 +66,8 @@ static KernelFunctionEntry kernel_functions[] = {
     { .name = "vector:length", .function = kernel_vector_length },
     { .name = "vector:concat", .function = kernel_vector_concat },
     { .name = "vector:slice", .function = kernel_vector_slice },
-    { .name = "vector:list", .function = kernel_vector_list }
+    { .name = "vector:list", .function = kernel_vector_list },
+    { .name = "vector:reverse", .function = kernel_vector_reverse }
 };
 
 LimeValue lime_module_initialize(LimeStack stack, LimeValue library) {

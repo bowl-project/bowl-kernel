@@ -112,3 +112,24 @@ LimeValue kernel_vector_list(LimeStack stack) {
 
     return NULL;
 }
+
+LimeValue kernel_vector_reverse(LimeStack stack) {
+    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    LIME_ASSERT_TYPE(frame.registers[0], LimeVectorValue);
+
+    const u64 length = frame.registers[0]->vector.length;
+    LIME_TRY(&frame.registers[1], lime_allocate(&frame, LimeVectorValue, length * sizeof(LimeValue)));
+
+    frame.registers[1]->vector.length = length;
+    LimeValue *const src = &frame.registers[0]->vector.elements[0];
+    LimeValue *const dst = &frame.registers[1]->vector.elements[0];
+    for (register u64 i = 0; i < length; ++i) {
+        dst[i] = src[length - i - 1];
+    }
+
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+
+    return NULL;
+}

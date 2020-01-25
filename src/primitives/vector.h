@@ -15,4 +15,6 @@ LimeValue kernel_vector_slice(LimeStack stack);
 
 LimeValue kernel_vector_list(LimeStack stack);
 
+LimeValue kernel_vector_reverse(LimeStack stack);
+
 #endif
