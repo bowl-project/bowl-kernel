@@ -26,6 +26,7 @@ static KernelFunctionEntry kernel_functions[] = {
     { .name = "list:contains", .function = kernel_list_contains },
     { .name = "list:slice", .function = kernel_list_slice },
     { .name = "list:reverse", .function = kernel_list_reverse },
+    { .name = "list:vector", .function = kernel_list_vector },
 
     { .name = "map:length", .function = kernel_map_length },
     { .name = "map:empty", .function = kernel_map_empty },
@@ -64,7 +65,8 @@ static KernelFunctionEntry kernel_functions[] = {
     { .name = "vector:fill", .function = kernel_vector_fill },
     { .name = "vector:length", .function = kernel_vector_length },
     { .name = "vector:concat", .function = kernel_vector_concat },
-    { .name = "vector:slice", .function = kernel_vector_slice }
+    { .name = "vector:slice", .function = kernel_vector_slice },
+    { .name = "vector:list", .function = kernel_vector_list }
 };
 
 LimeValue lime_module_initialize(LimeStack stack, LimeValue library) {

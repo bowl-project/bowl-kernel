@@ -97,3 +97,18 @@ LimeValue kernel_vector_slice(LimeStack stack) {
 
     return NULL;
 }
+
+LimeValue kernel_vector_list(LimeStack stack) {
+    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+
+    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    LIME_ASSERT_TYPE(frame.registers[0], LimeVectorValue);
+
+    for (register u64 i = frame.registers[0]->vector.length; i > 0; --i) {
+        LIME_TRY(&frame.registers[1], lime_list(&frame, frame.registers[0]->vector.elements[i - 1], frame.registers[1]));
+    }
+
+    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+
+    return NULL;
+}

@@ -63,7 +63,7 @@ register-definition
 
 quote parse-tuple
 "... tokens ( -- ... result rest" drop
-"drop \"not yet implemented\" exception trigger" tokens
+"drop list:empty swap parse-symbol-closing-paren parse-until swap list:vector swap" tokens
 register-definition
 
 quote parse-map

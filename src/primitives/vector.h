@@ -13,4 +13,6 @@ LimeValue kernel_vector_concat(LimeStack stack);
 
 LimeValue kernel_vector_slice(LimeStack stack);
 
+LimeValue kernel_vector_list(LimeStack stack);
+
 #endif
