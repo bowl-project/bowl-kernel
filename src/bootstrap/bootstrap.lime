@@ -136,7 +136,37 @@ define io:println io:print "\n" io:print .
 
 define throw exception trigger .
 
-( 1 2 3 4 5 ) vector:reverse show io:println
+define repl
+    /* print the prompt */
+    "> " io:print
+    
+    /* read the next line, parse it and use it as the new callstack */
+    list:empty io:scan tokens parse-all
+    
+    /* push the current dictionary and swap it with the parsed tokens */
+    dictionary swap
 
-42 "hello world" vector:fill throw
+    /* move the datastack to the top */
+    rot rot
 
+    /* invoke the sandbox instance */
+    run
+
+    /* check for exceptions */
+    swap dup list:empty equals
+    [ drop ]
+    [ throw ]
+    if
+    
+    /* remember the new dictionary to allow the user to introduce new words */
+    swap lift rot rot drop list:pop rot swap dup list:length 14 number:subtract 14 list:slice swap continue
+
+    /* print the current datastack */
+    dup show io:println
+
+    /* continue with the next line */
+    repl
+.
+
+/* TODO: definitions may not be part of comments because this leads to a parse failure */
+list:empty repl
