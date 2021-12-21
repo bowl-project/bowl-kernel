@@ -1,33 +1,33 @@
 #include "number.h"
 
-static inline LimeValue kernel_number_comparison(LimeStack stack, bool (*const comparison)(double const, double const)) {
-    LimeValue a;
-    LimeValue b;
+static inline BowlValue kernel_number_comparison(BowlStack stack, bool (*const comparison)(double const, double const)) {
+    BowlValue a;
+    BowlValue b;
 
-    LIME_STACK_POP_VALUE(stack, &b);
-    LIME_ASSERT_TYPE(b, LimeNumberValue);
+    BOWL_STACK_POP_VALUE(stack, &b);
+    BOWL_ASSERT_TYPE(b, BowlNumberValue);
 
-    LIME_STACK_POP_VALUE(stack, &a);
-    LIME_ASSERT_TYPE(a, LimeNumberValue);
+    BOWL_STACK_POP_VALUE(stack, &a);
+    BOWL_ASSERT_TYPE(a, BowlNumberValue);
     
-    LIME_TRY(&a, lime_boolean(stack, comparison(a->number.value, b->number.value)));
-    LIME_STACK_PUSH_VALUE(stack, a);
+    BOWL_TRY(&a, bowl_boolean(stack, comparison(a->number.value, b->number.value)));
+    BOWL_STACK_PUSH_VALUE(stack, a);
 
     return NULL;
 }
 
-static inline LimeValue kernel_number_binary(LimeStack stack, double (*const operation)(double const, double const)) {
-    LimeValue a;
-    LimeValue b;
+static inline BowlValue kernel_number_binary(BowlStack stack, double (*const operation)(double const, double const)) {
+    BowlValue a;
+    BowlValue b;
 
-    LIME_STACK_POP_VALUE(stack, &b);
-    LIME_ASSERT_TYPE(b, LimeNumberValue);
+    BOWL_STACK_POP_VALUE(stack, &b);
+    BOWL_ASSERT_TYPE(b, BowlNumberValue);
 
-    LIME_STACK_POP_VALUE(stack, &a);
-    LIME_ASSERT_TYPE(a, LimeNumberValue);
+    BOWL_STACK_POP_VALUE(stack, &a);
+    BOWL_ASSERT_TYPE(a, BowlNumberValue);
     
-    LIME_TRY(&a, lime_number(stack, operation(a->number.value, b->number.value)));
-    LIME_STACK_PUSH_VALUE(stack, a);
+    BOWL_TRY(&a, bowl_number(stack, operation(a->number.value, b->number.value)));
+    BOWL_STACK_PUSH_VALUE(stack, a);
 
     return NULL;
 }
@@ -68,38 +68,38 @@ static inline bool kernel_number_comparison_greater_equal(double const a, double
     return a >= b;
 }
 
-LimeValue kernel_number_add(LimeStack stack) {
+BowlValue kernel_number_add(BowlStack stack) {
     return kernel_number_binary(stack, kernel_number_operation_add);
 }
 
-LimeValue kernel_number_subtract(LimeStack stack) {
+BowlValue kernel_number_subtract(BowlStack stack) {
     return kernel_number_binary(stack, kernel_number_operation_subtract);
 }
 
-LimeValue kernel_number_multiply(LimeStack stack) {
+BowlValue kernel_number_multiply(BowlStack stack) {
     return kernel_number_binary(stack, kernel_number_operation_multiply);
 }
 
-LimeValue kernel_number_divide(LimeStack stack) {
+BowlValue kernel_number_divide(BowlStack stack) {
     return kernel_number_binary(stack, kernel_number_operation_divide);
 }
 
-LimeValue kernel_number_remainder(LimeStack stack) {
+BowlValue kernel_number_remainder(BowlStack stack) {
     return kernel_number_binary(stack, kernel_number_operation_remainder);
 }
 
-LimeValue kernel_number_less_than(LimeStack stack) {
+BowlValue kernel_number_less_than(BowlStack stack) {
     return kernel_number_comparison(stack, kernel_number_comparison_less_than);
 }
 
-LimeValue kernel_number_less_equal(LimeStack stack) {
+BowlValue kernel_number_less_equal(BowlStack stack) {
     return kernel_number_comparison(stack, kernel_number_comparison_less_equal);
 }
 
-LimeValue kernel_number_greater_than(LimeStack stack) {
+BowlValue kernel_number_greater_than(BowlStack stack) {
     return kernel_number_comparison(stack, kernel_number_comparison_greater_than);
 }
 
-LimeValue kernel_number_greater_equal(LimeStack stack) {
+BowlValue kernel_number_greater_equal(BowlStack stack) {
     return kernel_number_comparison(stack, kernel_number_comparison_greater_equal);
 }

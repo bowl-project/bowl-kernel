@@ -1,24 +1,24 @@
 #ifndef KERNEL_LIST_H
 #define KERNEL_LIST_H
 
-#include <lime/api.h>
+#include <bowl/api.h>
 
-LimeValue kernel_list_length(LimeStack stack);
+BowlValue kernel_list_length(BowlStack stack);
 
-LimeValue kernel_list_empty(LimeStack stack);
+BowlValue kernel_list_empty(BowlStack stack);
 
-LimeValue kernel_list_push(LimeStack stack);
+BowlValue kernel_list_push(BowlStack stack);
 
-LimeValue kernel_list_pop(LimeStack stack);
+BowlValue kernel_list_pop(BowlStack stack);
 
-LimeValue kernel_list_concat(LimeStack stack);
+BowlValue kernel_list_concat(BowlStack stack);
 
-LimeValue kernel_list_contains(LimeStack stack);
+BowlValue kernel_list_contains(BowlStack stack);
 
-LimeValue kernel_list_slice(LimeStack stack);
+BowlValue kernel_list_slice(BowlStack stack);
 
-LimeValue kernel_list_reverse(LimeStack stack);
+BowlValue kernel_list_reverse(BowlStack stack);
 
-LimeValue kernel_list_vector(LimeStack stack);
+BowlValue kernel_list_vector(BowlStack stack);
 
 #endif

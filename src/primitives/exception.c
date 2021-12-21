@@ -1,11 +1,11 @@
 #include "exception.h"
 
-LimeValue kernel_exception(LimeStack stack) {
-    LimeValue value;
+BowlValue kernel_exception(BowlStack stack) {
+    BowlValue value;
 
-    LIME_STACK_POP_VALUE(stack, &value);
-    LIME_TRY(&value, lime_exception(stack, NULL, value));
-    LIME_STACK_PUSH_VALUE(stack, value);
+    BOWL_STACK_POP_VALUE(stack, &value);
+    BOWL_TRY(&value, bowl_exception(stack, NULL, value));
+    BOWL_STACK_PUSH_VALUE(stack, value);
 
     return NULL;
 }

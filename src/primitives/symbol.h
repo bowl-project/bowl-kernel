@@ -1,8 +1,8 @@
 #ifndef KERNEL_SYMBOL_H
 #define KERNEL_SYMBOL_H
 
-#include <lime/api.h>
+#include <bowl/api.h>
 
-LimeValue kernel_symbol_length(LimeStack stack);
+BowlValue kernel_symbol_length(BowlStack stack);
 
 #endif

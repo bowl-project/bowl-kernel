@@ -1,8 +1,8 @@
 #ifndef KERNEL_EXCEPTION_H
 #define KERNEL_EXCEPTION_H
 
-#include <lime/api.h>
+#include <bowl/api.h>
 
-LimeValue kernel_exception(LimeStack stack);
+BowlValue kernel_exception(BowlStack stack);
 
 #endif

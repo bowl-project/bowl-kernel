@@ -1,7 +1,7 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
-#include <lime/api.h>
+#include <bowl/api.h>
 #include "primitives/boolean.h"
 #include "primitives/list.h"
 #include "primitives/map.h"
@@ -13,7 +13,7 @@
 
 typedef struct {
     char *name;
-    LimeFunction function;
+    BowlFunction function;
 } KernelFunctionEntry;
 
 /**
@@ -21,77 +21,77 @@ typedef struct {
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_tokens(LimeStack stack);
+BowlValue kernel_tokens(BowlStack stack);
 
 /**
  * Swaps the two topmost elements on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_swap(LimeStack stack);
+BowlValue kernel_swap(BowlStack stack);
 
 /**
  * Rotates the three topmost elements on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_rot(LimeStack stack);
+BowlValue kernel_rot(BowlStack stack);
 
 /**
  * Drops the topmost element off the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_drop(LimeStack stack);
+BowlValue kernel_drop(BowlStack stack);
 
 /**
  * Pushes two copies of the topmost value on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_dup(LimeStack stack);
+BowlValue kernel_dup(BowlStack stack);
 
 /**
  * Pushes the type of the topmost value as a string.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_type(LimeStack stack);
+BowlValue kernel_type(BowlStack stack);
 
 /**
  * Pushes the hash of the topmost value as a number.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_hash(LimeStack stack);
+BowlValue kernel_hash(BowlStack stack);
 
 /**
  * Pushes whether or not the two topmost values are equal.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_equals(LimeStack stack);
+BowlValue kernel_equals(BowlStack stack);
 
 /**
  * Pushes a string representation of the topmost value.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_show(LimeStack stack);
+BowlValue kernel_show(BowlStack stack);
 
 /**
  * Triggers an exception by throwing the topmost value of the stack.
  * @param stack The stack of the current environment.
  * @return This function always returns the triggered exception.
  */
-LimeValue kernel_trigger(LimeStack stack);
+BowlValue kernel_trigger(BowlStack stack);
 
 /**
  * Pushes a library value denoted by topmost path value on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_library(LimeStack stack);
+BowlValue kernel_library(BowlStack stack);
 
 /**
  * Pushes a native function value denoted by the two topmost values on the stack.
@@ -101,7 +101,7 @@ LimeValue kernel_library(LimeStack stack);
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_native(LimeStack stack);
+BowlValue kernel_native(BowlStack stack);
 
 /**
  * Expects a datastack, callstack and dictionary as the topmost values and creates
@@ -109,20 +109,20 @@ LimeValue kernel_native(LimeStack stack);
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_run(LimeStack stack);
+BowlValue kernel_run(BowlStack stack);
 
 /**
  * Lifts the current continuation on the datastack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_lift(LimeStack stack);
+BowlValue kernel_lift(BowlStack stack);
 
 /**
  * Continues with the continuation which resides on the stack.
  * @param stack The stack of the current environment.
  * @return Either 'NULL' in case of a success or the exception value.
  */
-LimeValue kernel_continue(LimeStack stack);
+BowlValue kernel_continue(BowlStack stack);
 
 #endif

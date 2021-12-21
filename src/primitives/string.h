@@ -1,18 +1,18 @@
 #ifndef KERNEL_STRING_H
 #define KERNEL_STRING_H
 
-#include <lime/api.h>
+#include <bowl/api.h>
 
-LimeValue kernel_string_length(LimeStack stack);
+BowlValue kernel_string_length(BowlStack stack);
 
-LimeValue kernel_string_concat(LimeStack stack);
+BowlValue kernel_string_concat(BowlStack stack);
 
-LimeValue kernel_string_slice(LimeStack stack);
+BowlValue kernel_string_slice(BowlStack stack);
 
-LimeValue kernel_string_number(LimeStack stack);
+BowlValue kernel_string_number(BowlStack stack);
 
-LimeValue kernel_string_boolean(LimeStack stack);
+BowlValue kernel_string_boolean(BowlStack stack);
 
-LimeValue kernel_string_symbol(LimeStack stack);
+BowlValue kernel_string_symbol(BowlStack stack);
 
 #endif

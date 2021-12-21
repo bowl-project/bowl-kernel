@@ -1,85 +1,85 @@
 #include "string.h"
 
-LimeValue kernel_string_length(LimeStack stack) {
-    LimeValue string;
+BowlValue kernel_string_length(BowlStack stack) {
+    BowlValue string;
 
-    LIME_STACK_POP_VALUE(stack, &string);
-    LIME_ASSERT_TYPE(string, LimeStringValue);
+    BOWL_STACK_POP_VALUE(stack, &string);
+    BOWL_ASSERT_TYPE(string, BowlStringValue);
 
-    LIME_TRY(&string, lime_number(stack, string->string.length));
-    LIME_STACK_PUSH_VALUE(stack, string);
+    BOWL_TRY(&string, bowl_number(stack, string->string.length));
+    BOWL_STACK_PUSH_VALUE(stack, string);
 
     return NULL;
 }
 
-LimeValue kernel_string_concat(LimeStack stack) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+BowlValue kernel_string_concat(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
 
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[1]);
-    LIME_ASSERT_TYPE(frame.registers[1], LimeStringValue);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[1]);
+    BOWL_ASSERT_TYPE(frame.registers[1], BowlStringValue);
 
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
-    LIME_ASSERT_TYPE(frame.registers[0], LimeStringValue);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    BOWL_ASSERT_TYPE(frame.registers[0], BowlStringValue);
 
     const u64 length = frame.registers[0]->string.length + frame.registers[1]->string.length;
-    LIME_TRY(&frame.registers[2], lime_allocate(&frame, LimeStringValue, length));
+    BOWL_TRY(&frame.registers[2], bowl_allocate(&frame, BowlStringValue, length));
     frame.registers[2]->string.length = length;
     memcpy(frame.registers[2]->string.bytes, frame.registers[0]->string.bytes, frame.registers[0]->string.length);
     memcpy(&frame.registers[2]->string.bytes[frame.registers[0]->string.length], frame.registers[1]->string.bytes, frame.registers[1]->string.length);
 
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[2]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[2]);
 
     return NULL;
 }
 
-LimeValue kernel_string_slice(LimeStack stack) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
-    LimeValue start;
-    LimeValue length;
+BowlValue kernel_string_slice(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+    BowlValue start;
+    BowlValue length;
 
-    LIME_STACK_POP_VALUE(&frame, &start);
-    LIME_ASSERT_TYPE(start, LimeNumberValue);
+    BOWL_STACK_POP_VALUE(&frame, &start);
+    BOWL_ASSERT_TYPE(start, BowlNumberValue);
 
-    LIME_STACK_POP_VALUE(&frame, &length);
-    LIME_ASSERT_TYPE(length, LimeNumberValue);
+    BOWL_STACK_POP_VALUE(&frame, &length);
+    BOWL_ASSERT_TYPE(length, BowlNumberValue);
 
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
-    LIME_ASSERT_TYPE(frame.registers[0], LimeStringValue);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    BOWL_ASSERT_TYPE(frame.registers[0], BowlStringValue);
 
     const s64 start_index = (s64) start->number.value;
     const s64 slice_length = (s64) length->number.value;
 
     if (slice_length < 0) {
-        return lime_format_exception(&frame, "length must be positive in function '%s' (%" PRId64 " was given)", __FUNCTION__, slice_length).value;
+        return bowl_format_exception(&frame, "length must be positive in function '%s' (%" PRId64 " was given)", __FUNCTION__, slice_length).value;
     }
 
     if (start_index < 0 || start_index > frame.registers[0]->string.length) {
-        return lime_format_exception(&frame, "index out of bounds in function '%s' (expected index to be positive and not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, frame.registers[0]->string.length, start_index).value;
+        return bowl_format_exception(&frame, "index out of bounds in function '%s' (expected index to be positive and not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, frame.registers[0]->string.length, start_index).value;
     }
 
     if (start_index + slice_length > frame.registers[0]->string.length) {
-        return lime_format_exception(&frame, "length exceeds string bounds in function '%s' (expected length to be not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, frame.registers[0]->string.length - start_index, slice_length).value;
+        return bowl_format_exception(&frame, "length exceeds string bounds in function '%s' (expected length to be not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, frame.registers[0]->string.length - start_index, slice_length).value;
     }
 
-    LIME_TRY(&frame.registers[1], lime_allocate(&frame, LimeStringValue, slice_length));
+    BOWL_TRY(&frame.registers[1], bowl_allocate(&frame, BowlStringValue, slice_length));
     frame.registers[1]->string.length = slice_length;
     memcpy(frame.registers[1]->string.bytes, &frame.registers[0]->string.bytes[start_index], slice_length);
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[1]);
 
     return NULL;
 }
 
-LimeValue kernel_string_number(LimeStack stack) {
-    LimeValue string;
+BowlValue kernel_string_number(BowlStack stack) {
+    BowlValue string;
 
-    LIME_STACK_POP_VALUE(stack, &string);
-    LIME_ASSERT_TYPE(string, LimeStringValue);
+    BOWL_STACK_POP_VALUE(stack, &string);
+    BOWL_ASSERT_TYPE(string, BowlStringValue);
 
     char content[512];
 
     if (string->string.length > sizeof(content) / sizeof(content[0])) {
         // no number is larger than the size of the buffer, i.e. the string cannot be well-formed
-        return lime_format_exception(stack, "illegal format in function '%s' (expected numeric string)", __FUNCTION__).value;
+        return bowl_format_exception(stack, "illegal format in function '%s' (expected numeric string)", __FUNCTION__).value;
     }
 
     memcpy(&content[0], &string->string.bytes[0], string->string.length);
@@ -89,20 +89,20 @@ LimeValue kernel_string_number(LimeStack stack) {
 
     const double result = strtod(start, &end);
     if (end - start != string->string.length) {
-        return lime_format_exception(stack, "illegal format in function '%s' (expected numeric string)", __FUNCTION__).value;
+        return bowl_format_exception(stack, "illegal format in function '%s' (expected numeric string)", __FUNCTION__).value;
     }
 
-    LIME_TRY(&string, lime_number(stack, result));
-    LIME_STACK_PUSH_VALUE(stack, string);
+    BOWL_TRY(&string, bowl_number(stack, result));
+    BOWL_STACK_PUSH_VALUE(stack, string);
 
     return NULL;
 }
 
-LimeValue kernel_string_boolean(LimeStack stack) {
-    LimeValue string;
+BowlValue kernel_string_boolean(BowlStack stack) {
+    BowlValue string;
 
-    LIME_STACK_POP_VALUE(stack, &string);
-    LIME_ASSERT_TYPE(string, LimeStringValue);
+    BOWL_STACK_POP_VALUE(stack, &string);
+    BOWL_ASSERT_TYPE(string, BowlStringValue);
 
     bool value;
     if (string->string.length == sizeof("true") - 1 && memcmp(string->string.bytes, "true", sizeof("true") - 1) == 0) {
@@ -110,34 +110,34 @@ LimeValue kernel_string_boolean(LimeStack stack) {
     } else if (string->string.length == sizeof("false") - 1 && memcmp(string->string.bytes, "false", sizeof("false") - 1) == 0) {
         value = false;
     } else {
-        return lime_format_exception(stack, "illegal format in function '%s' (expected either 'true' or 'false')", __FUNCTION__).value;
+        return bowl_format_exception(stack, "illegal format in function '%s' (expected either 'true' or 'false')", __FUNCTION__).value;
     }
 
-    LIME_TRY(&string, lime_boolean(stack, value));
-    LIME_STACK_PUSH_VALUE(stack, string);
+    BOWL_TRY(&string, bowl_boolean(stack, value));
+    BOWL_STACK_PUSH_VALUE(stack, string);
 
     return NULL;
 }
 
-LimeValue kernel_string_symbol(LimeStack stack) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+BowlValue kernel_string_symbol(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
 
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
-    LIME_ASSERT_TYPE(frame.registers[0], LimeStringValue);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    BOWL_ASSERT_TYPE(frame.registers[0], BowlStringValue);
 
     const u64 length = frame.registers[0]->string.length;
     u8 *const bytes = &frame.registers[0]->string.bytes[0];
     for (u64 i = 0; i < length; ++i) {
         if (isspace(bytes[i])) {
-            return lime_format_exception(&frame, "illegal format in function '%s' (a symbol may not contain whitespace)", __FUNCTION__).value;
+            return bowl_format_exception(&frame, "illegal format in function '%s' (a symbol may not contain whitespace)", __FUNCTION__).value;
         }
     }
 
-    LIME_TRY(&frame.registers[1], lime_allocate(&frame, LimeSymbolValue, length));
+    BOWL_TRY(&frame.registers[1], bowl_allocate(&frame, BowlSymbolValue, length));
     frame.registers[1]->symbol.length = length;
     memcpy(frame.registers[1]->symbol.bytes, frame.registers[0]->string.bytes, length);
 
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[1]);
 
     return NULL;
 }

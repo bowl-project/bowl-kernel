@@ -1,16 +1,16 @@
 #ifndef KERNEL_BOOLEAN_H
 #define KERNEL_BOOLEAN_H
 
-#include <lime/api.h>
+#include <bowl/api.h>
 
-LimeValue kernel_boolean_and(LimeStack stack);
+BowlValue kernel_boolean_and(BowlStack stack);
 
-LimeValue kernel_boolean_or(LimeStack stack);
+BowlValue kernel_boolean_or(BowlStack stack);
 
-LimeValue kernel_boolean_xor(LimeStack stack);
+BowlValue kernel_boolean_xor(BowlStack stack);
 
-LimeValue kernel_boolean_not(LimeStack stack);
+BowlValue kernel_boolean_not(BowlStack stack);
 
-LimeValue kernel_boolean_choose(LimeStack stack);
+BowlValue kernel_boolean_choose(BowlStack stack);
 
 #endif

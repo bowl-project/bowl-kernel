@@ -1,97 +1,97 @@
 #include "map.h"
 
-LimeValue kernel_map_length(LimeStack stack) {
-    LimeValue value;
+BowlValue kernel_map_length(BowlStack stack) {
+    BowlValue value;
 
-    LIME_STACK_POP_VALUE(stack, &value);
-    LIME_ASSERT_TYPE(value, LimeMapValue);
+    BOWL_STACK_POP_VALUE(stack, &value);
+    BOWL_ASSERT_TYPE(value, BowlMapValue);
 
-    LIME_TRY(&value, lime_number(stack, value->map.length));
-    LIME_STACK_PUSH_VALUE(stack, value);
-
-    return NULL;
-}
-
-LimeValue kernel_map_empty(LimeStack stack) {
-    LimeValue value;
-    LIME_TRY(&value, lime_map(stack, 16));
-    LIME_STACK_PUSH_VALUE(stack, value);
-    return NULL;
-}
-
-LimeValue kernel_map_put(LimeStack stack) {
-    LimeValue value;
-    LimeValue key;
-    LimeValue map;
-
-    LIME_STACK_POP_VALUE(stack, &value);
-    LIME_STACK_POP_VALUE(stack, &key);
-    LIME_STACK_POP_VALUE(stack, &map);
-    LIME_ASSERT_TYPE(map, LimeMapValue);
-
-    LIME_TRY(&map, lime_map_put(stack, map, key, value));
-    LIME_STACK_PUSH_VALUE(stack, map);
+    BOWL_TRY(&value, bowl_number(stack, value->map.length));
+    BOWL_STACK_PUSH_VALUE(stack, value);
 
     return NULL;
 }
 
-LimeValue kernel_map_get(LimeStack stack) {
-    LimeValue value;
-    LimeValue key;
-    LimeValue map;
+BowlValue kernel_map_empty(BowlStack stack) {
+    BowlValue value;
+    BOWL_TRY(&value, bowl_map(stack, 16));
+    BOWL_STACK_PUSH_VALUE(stack, value);
+    return NULL;
+}
 
-    LIME_STACK_POP_VALUE(stack, &value);
-    LIME_STACK_POP_VALUE(stack, &key);
-    LIME_STACK_POP_VALUE(stack, &map);
-    LIME_ASSERT_TYPE(map, LimeMapValue);
+BowlValue kernel_map_put(BowlStack stack) {
+    BowlValue value;
+    BowlValue key;
+    BowlValue map;
 
-    value = lime_map_get_or_else(map, key, value);
-    LIME_STACK_PUSH_VALUE(stack, value);
+    BOWL_STACK_POP_VALUE(stack, &value);
+    BOWL_STACK_POP_VALUE(stack, &key);
+    BOWL_STACK_POP_VALUE(stack, &map);
+    BOWL_ASSERT_TYPE(map, BowlMapValue);
+
+    BOWL_TRY(&map, bowl_map_put(stack, map, key, value));
+    BOWL_STACK_PUSH_VALUE(stack, map);
 
     return NULL;
 }
 
-LimeValue kernel_map_del(LimeStack stack) {
-    LimeValue key;
-    LimeValue map;
+BowlValue kernel_map_get(BowlStack stack) {
+    BowlValue value;
+    BowlValue key;
+    BowlValue map;
 
-    LIME_STACK_POP_VALUE(stack, &key);
-    LIME_STACK_POP_VALUE(stack, &map);
-    LIME_ASSERT_TYPE(map, LimeMapValue);
+    BOWL_STACK_POP_VALUE(stack, &value);
+    BOWL_STACK_POP_VALUE(stack, &key);
+    BOWL_STACK_POP_VALUE(stack, &map);
+    BOWL_ASSERT_TYPE(map, BowlMapValue);
 
-    LIME_TRY(&map, lime_map_delete(stack, map, key));
-    LIME_STACK_PUSH_VALUE(stack, map);
-
-    return NULL;
-}
-
-LimeValue kernel_map_merge(LimeStack stack) {
-    LimeValue a;
-    LimeValue b;
-
-    LIME_STACK_POP_VALUE(stack, &b);
-    LIME_ASSERT_TYPE(b, LimeMapValue);
-
-    LIME_STACK_POP_VALUE(stack, &a);
-    LIME_ASSERT_TYPE(a, LimeMapValue);
-
-    LIME_TRY(&a, lime_map_merge(stack, a, b));
-    LIME_STACK_PUSH_VALUE(stack, a);
+    value = bowl_map_get_or_else(map, key, value);
+    BOWL_STACK_PUSH_VALUE(stack, value);
 
     return NULL;
 }
 
-LimeValue kernel_map_contains(LimeStack stack) {
-    LimeValue key;
-    LimeValue map;
+BowlValue kernel_map_del(BowlStack stack) {
+    BowlValue key;
+    BowlValue map;
 
-    LIME_STACK_POP_VALUE(stack, &key);
-    LIME_STACK_POP_VALUE(stack, &map);
-    LIME_ASSERT_TYPE(map, LimeMapValue);
+    BOWL_STACK_POP_VALUE(stack, &key);
+    BOWL_STACK_POP_VALUE(stack, &map);
+    BOWL_ASSERT_TYPE(map, BowlMapValue);
 
-    const bool contains = lime_map_get_or_else(map, key, lime_sentinel_value) != lime_sentinel_value;
-    LIME_TRY(&key, lime_boolean(stack, contains));
-    LIME_STACK_PUSH_VALUE(stack, key);
+    BOWL_TRY(&map, bowl_map_delete(stack, map, key));
+    BOWL_STACK_PUSH_VALUE(stack, map);
+
+    return NULL;
+}
+
+BowlValue kernel_map_merge(BowlStack stack) {
+    BowlValue a;
+    BowlValue b;
+
+    BOWL_STACK_POP_VALUE(stack, &b);
+    BOWL_ASSERT_TYPE(b, BowlMapValue);
+
+    BOWL_STACK_POP_VALUE(stack, &a);
+    BOWL_ASSERT_TYPE(a, BowlMapValue);
+
+    BOWL_TRY(&a, bowl_map_merge(stack, a, b));
+    BOWL_STACK_PUSH_VALUE(stack, a);
+
+    return NULL;
+}
+
+BowlValue kernel_map_contains(BowlStack stack) {
+    BowlValue key;
+    BowlValue map;
+
+    BOWL_STACK_POP_VALUE(stack, &key);
+    BOWL_STACK_POP_VALUE(stack, &map);
+    BOWL_ASSERT_TYPE(map, BowlMapValue);
+
+    const bool contains = bowl_map_get_or_else(map, key, bowl_sentinel_value) != bowl_sentinel_value;
+    BOWL_TRY(&key, bowl_boolean(stack, contains));
+    BOWL_STACK_PUSH_VALUE(stack, key);
 
     return NULL;
 }

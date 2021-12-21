@@ -1,20 +1,20 @@
 #ifndef KERNEL_VECTOR_H
 #define KERNEL_VECTOR_H
 
-#include <lime/api.h>
+#include <bowl/api.h>
 
-LimeValue kernel_vector_empty(LimeStack stack);
+BowlValue kernel_vector_empty(BowlStack stack);
 
-LimeValue kernel_vector_fill(LimeStack stack);
+BowlValue kernel_vector_fill(BowlStack stack);
 
-LimeValue kernel_vector_length(LimeStack stack);
+BowlValue kernel_vector_length(BowlStack stack);
 
-LimeValue kernel_vector_concat(LimeStack stack);
+BowlValue kernel_vector_concat(BowlStack stack);
 
-LimeValue kernel_vector_slice(LimeStack stack);
+BowlValue kernel_vector_slice(BowlStack stack);
 
-LimeValue kernel_vector_list(LimeStack stack);
+BowlValue kernel_vector_list(BowlStack stack);
 
-LimeValue kernel_vector_reverse(LimeStack stack);
+BowlValue kernel_vector_reverse(BowlStack stack);
 
 #endif

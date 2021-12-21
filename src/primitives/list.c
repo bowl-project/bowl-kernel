@@ -1,126 +1,126 @@
 #include "list.h"
 
-LimeValue kernel_list_length(LimeStack stack) {
-    LimeValue value;
+BowlValue kernel_list_length(BowlStack stack) {
+    BowlValue value;
 
-    LIME_STACK_POP_VALUE(stack, &value);
-    LIME_ASSERT_TYPE(value, LimeListValue);
-    LIME_TRY(&value, lime_number(stack, value == NULL ? 0 : value->list.length));
-    LIME_STACK_PUSH_VALUE(stack, value);
-
-    return NULL;
-}
-
-LimeValue kernel_list_empty(LimeStack stack) {
-    LIME_STACK_PUSH_VALUE(stack, NULL);
-    return NULL;
-}
-
-LimeValue kernel_list_push(LimeStack stack) {
-    LimeValue head;
-    LimeValue tail;
-    LimeValue value;
-
-    LIME_STACK_POP_VALUE(stack, &head);
-    LIME_STACK_POP_VALUE(stack, &tail);
-    LIME_ASSERT_TYPE(tail, LimeListValue);
-    LIME_TRY(&value, lime_list(stack, head, tail));
-    LIME_STACK_PUSH_VALUE(stack, value);
+    BOWL_STACK_POP_VALUE(stack, &value);
+    BOWL_ASSERT_TYPE(value, BowlListValue);
+    BOWL_TRY(&value, bowl_number(stack, value == NULL ? 0 : value->list.length));
+    BOWL_STACK_PUSH_VALUE(stack, value);
 
     return NULL;
 }
 
-LimeValue kernel_list_pop(LimeStack stack) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+BowlValue kernel_list_empty(BowlStack stack) {
+    BOWL_STACK_PUSH_VALUE(stack, NULL);
+    return NULL;
+}
 
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
-    LIME_ASSERT_TYPE(frame.registers[0], LimeListValue);
+BowlValue kernel_list_push(BowlStack stack) {
+    BowlValue head;
+    BowlValue tail;
+    BowlValue value;
+
+    BOWL_STACK_POP_VALUE(stack, &head);
+    BOWL_STACK_POP_VALUE(stack, &tail);
+    BOWL_ASSERT_TYPE(tail, BowlListValue);
+    BOWL_TRY(&value, bowl_list(stack, head, tail));
+    BOWL_STACK_PUSH_VALUE(stack, value);
+
+    return NULL;
+}
+
+BowlValue kernel_list_pop(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    BOWL_ASSERT_TYPE(frame.registers[0], BowlListValue);
 
     if (frame.registers[0] == NULL) {
-        return lime_format_exception(&frame, "empty list provided in function '%s'", __FUNCTION__).value;
+        return bowl_format_exception(&frame, "empty list provided in function '%s'", __FUNCTION__).value;
     }
 
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]->list.tail);
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]->list.head);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[0]->list.tail);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[0]->list.head);
 
     return NULL;
 }
 
-LimeValue kernel_list_concat(LimeStack stack) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+BowlValue kernel_list_concat(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
 
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[1]);
-    LIME_ASSERT_TYPE(frame.registers[1], LimeListValue);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[1]);
+    BOWL_ASSERT_TYPE(frame.registers[1], BowlListValue);
     
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
-    LIME_ASSERT_TYPE(frame.registers[0], LimeListValue);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    BOWL_ASSERT_TYPE(frame.registers[0], BowlListValue);
 
     while (frame.registers[0] != NULL) {
-        LIME_TRY(&frame.registers[2], lime_list(&frame, frame.registers[0]->list.head, frame.registers[2]));
+        BOWL_TRY(&frame.registers[2], bowl_list(&frame, frame.registers[0]->list.head, frame.registers[2]));
         frame.registers[0] = frame.registers[0]->list.tail;
     }
 
     frame.registers[0] = frame.registers[1];
     while (frame.registers[2] != NULL) {
-        LIME_TRY(&frame.registers[0], lime_list(&frame, frame.registers[2]->list.head, frame.registers[0]));
+        BOWL_TRY(&frame.registers[0], bowl_list(&frame, frame.registers[2]->list.head, frame.registers[0]));
         frame.registers[2] = frame.registers[2]->list.tail;
     }
 
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[0]);
     return NULL;
 }
 
-LimeValue kernel_list_contains(LimeStack stack) {
-    LimeValue list;
-    LimeValue element;
+BowlValue kernel_list_contains(BowlStack stack) {
+    BowlValue list;
+    BowlValue element;
 
-    LIME_STACK_POP_VALUE(stack, &element);
-    LIME_STACK_POP_VALUE(stack, &list);
-    LIME_ASSERT_TYPE(list, LimeListValue);
+    BOWL_STACK_POP_VALUE(stack, &element);
+    BOWL_STACK_POP_VALUE(stack, &list);
+    BOWL_ASSERT_TYPE(list, BowlListValue);
 
     bool contains = false;
     while (list != NULL) {
-        if (lime_value_equals(list->list.head, element)) {
+        if (bowl_value_equals(list->list.head, element)) {
             contains = true;
             break;
         }
         list = list->list.tail;
     }
 
-    LIME_TRY(&element, lime_boolean(stack, contains));
-    LIME_STACK_PUSH_VALUE(stack, element);
+    BOWL_TRY(&element, bowl_boolean(stack, contains));
+    BOWL_STACK_PUSH_VALUE(stack, element);
 
     return NULL;
 }
 
-LimeValue kernel_list_slice(LimeStack stack) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
-    LimeValue start;
-    LimeValue length;
+BowlValue kernel_list_slice(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+    BowlValue start;
+    BowlValue length;
 
-    LIME_STACK_POP_VALUE(&frame, &start);
-    LIME_ASSERT_TYPE(start, LimeNumberValue);
+    BOWL_STACK_POP_VALUE(&frame, &start);
+    BOWL_ASSERT_TYPE(start, BowlNumberValue);
 
-    LIME_STACK_POP_VALUE(&frame, &length);
-    LIME_ASSERT_TYPE(length, LimeNumberValue);
+    BOWL_STACK_POP_VALUE(&frame, &length);
+    BOWL_ASSERT_TYPE(length, BowlNumberValue);
 
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
-    LIME_ASSERT_TYPE(frame.registers[0], LimeListValue);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    BOWL_ASSERT_TYPE(frame.registers[0], BowlListValue);
 
     const s64 start_index = (s64) start->number.value;
     const s64 slice_length = (s64) length->number.value;
     const u64 list_length = frame.registers[0] == NULL ? 0 : frame.registers[0]->list.length;
 
     if (slice_length < 0) {
-        return lime_format_exception(&frame, "length must be positive in function '%s' (%" PRId64 " was given)", __FUNCTION__, slice_length).value;
+        return bowl_format_exception(&frame, "length must be positive in function '%s' (%" PRId64 " was given)", __FUNCTION__, slice_length).value;
     }
 
     if (start_index < 0 || start_index > list_length) {
-        return lime_format_exception(&frame, "index out of bounds in function '%s' (expected index to be positive and not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, list_length, start_index).value;
+        return bowl_format_exception(&frame, "index out of bounds in function '%s' (expected index to be positive and not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, list_length, start_index).value;
     }
 
     if (start_index + slice_length > list_length) {
-        return lime_format_exception(&frame, "length exceeds string bounds in function '%s' (expected length to be not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, list_length - start_index, slice_length).value;
+        return bowl_format_exception(&frame, "length exceeds string bounds in function '%s' (expected length to be not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, list_length - start_index, slice_length).value;
     }
 
     // skip the start
@@ -134,7 +134,7 @@ LimeValue kernel_list_slice(LimeStack stack) {
         // fetch the slice
         frame.registers[1] = NULL;
         while (index < start_index + slice_length) {
-            LIME_TRY(&frame.registers[1], lime_list(&frame, frame.registers[0]->list.head, frame.registers[1]));
+            BOWL_TRY(&frame.registers[1], bowl_list(&frame, frame.registers[0]->list.head, frame.registers[1]));
             frame.registers[0] = frame.registers[0]->list.tail;
             ++index;
         }
@@ -142,36 +142,36 @@ LimeValue kernel_list_slice(LimeStack stack) {
         // reverse the result
         frame.registers[0] = NULL;
         while (frame.registers[1] != NULL) {
-            LIME_TRY(&frame.registers[0], lime_list(&frame, frame.registers[1]->list.head, frame.registers[0]));
+            BOWL_TRY(&frame.registers[0], bowl_list(&frame, frame.registers[1]->list.head, frame.registers[0]));
             frame.registers[1] = frame.registers[1]->list.tail;
         }
     }
 
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[0]);
 
     return NULL;
 }
 
-LimeValue kernel_list_reverse(LimeStack stack) {
-    LimeValue list;
+BowlValue kernel_list_reverse(BowlStack stack) {
+    BowlValue list;
 
-    LIME_STACK_POP_VALUE(stack, &list);
-    LIME_ASSERT_TYPE(list, LimeListValue);
+    BOWL_STACK_POP_VALUE(stack, &list);
+    BOWL_ASSERT_TYPE(list, BowlListValue);
 
-    LIME_TRY(&list, lime_list_reverse(stack, list));
-    LIME_STACK_PUSH_VALUE(stack, list);
+    BOWL_TRY(&list, bowl_list_reverse(stack, list));
+    BOWL_STACK_PUSH_VALUE(stack, list);
 
     return NULL;
 }
 
-LimeValue kernel_list_vector(LimeStack stack) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+BowlValue kernel_list_vector(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
 
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
-    LIME_ASSERT_TYPE(frame.registers[0], LimeListValue);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    BOWL_ASSERT_TYPE(frame.registers[0], BowlListValue);
 
     const u64 length = frame.registers[0] == NULL ? 0 : frame.registers[0]->list.length;
-    LIME_TRY(&frame.registers[1], lime_allocate(&frame, LimeVectorValue, length * sizeof(LimeValue)));
+    BOWL_TRY(&frame.registers[1], bowl_allocate(&frame, BowlVectorValue, length * sizeof(BowlValue)));
     frame.registers[1]->vector.length = length;
 
     register u64 index = 0;
@@ -180,7 +180,7 @@ LimeValue kernel_list_vector(LimeStack stack) {
         frame.registers[0] = frame.registers[0]->list.tail;
     }
 
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[1]);
 
     return NULL;
 }

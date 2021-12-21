@@ -70,12 +70,12 @@ static KernelFunctionEntry kernel_functions[] = {
     { .name = "vector:reverse", .function = kernel_vector_reverse }
 };
 
-LimeValue lime_module_initialize(LimeStack stack, LimeValue library) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, library, NULL, NULL);
+BowlValue bowl_module_initialize(BowlStack stack, BowlValue library) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, library, NULL, NULL);
 
     for (u64 i = 0; i < sizeof(kernel_functions) / sizeof(kernel_functions[0]); ++i) {
         KernelFunctionEntry *const entry = &kernel_functions[i];
-        const LimeValue exception = lime_register_function(&frame, entry->name, frame.registers[0], entry->function);
+        const BowlValue exception = bowl_register_function(&frame, entry->name, frame.registers[0], entry->function);
         if (exception != NULL) {
             return exception;
         }
@@ -84,233 +84,233 @@ LimeValue lime_module_initialize(LimeStack stack, LimeValue library) {
     return NULL;    
 }
 
-LimeValue lime_module_finalize(LimeStack stack, LimeValue library) {
+BowlValue bowl_module_finalize(BowlStack stack, BowlValue library) {
     return NULL;
 }
 
 
-LimeValue kernel_dup(LimeStack stack) {
+BowlValue kernel_dup(BowlStack stack) {
     if (*stack->datastack == NULL) {
-        return lime_format_exception(stack, "stack underflow in function '%s'", __FUNCTION__).value;
+        return bowl_format_exception(stack, "stack underflow in function '%s'", __FUNCTION__).value;
     }
 
-    LIME_STACK_PUSH_VALUE(stack, (*stack->datastack)->list.head);
+    BOWL_STACK_PUSH_VALUE(stack, (*stack->datastack)->list.head);
     return NULL;
 }
 
-LimeValue kernel_type(LimeStack stack) {
-    LIME_STATIC_STRING(symbol_type, "symbol");
-    LIME_STATIC_STRING(list_type, "list");
-    LIME_STATIC_STRING(function_type, "function");
-    LIME_STATIC_STRING(map_type, "map");
-    LIME_STATIC_STRING(boolean_type, "boolean");
-    LIME_STATIC_STRING(number_type, "number");
-    LIME_STATIC_STRING(string_type, "string");
-    LIME_STATIC_STRING(library_type, "library");
-    LIME_STATIC_STRING(vector_type, "vector");
-    LIME_STATIC_STRING(exception_type, "exception");
+BowlValue kernel_type(BowlStack stack) {
+    BOWL_STATIC_STRING(symbol_type, "symbol");
+    BOWL_STATIC_STRING(list_type, "list");
+    BOWL_STATIC_STRING(function_type, "function");
+    BOWL_STATIC_STRING(map_type, "map");
+    BOWL_STATIC_STRING(boolean_type, "boolean");
+    BOWL_STATIC_STRING(number_type, "number");
+    BOWL_STATIC_STRING(string_type, "string");
+    BOWL_STATIC_STRING(library_type, "library");
+    BOWL_STATIC_STRING(vector_type, "vector");
+    BOWL_STATIC_STRING(exception_type, "exception");
   
-    static LimeValue types[] = {
-        [LimeSymbolValue]    = &symbol_type.value,
-        [LimeListValue]      = &list_type.value,
-        [LimeNativeValue]    = &function_type.value,
-        [LimeMapValue]       = &map_type.value,
-        [LimeBooleanValue]   = &boolean_type.value,
-        [LimeNumberValue]    = &number_type.value,
-        [LimeStringValue]    = &string_type.value,
-        [LimeLibraryValue]   = &library_type.value,
-        [LimeVectorValue]    = &vector_type.value,
-        [LimeExceptionValue] = &exception_type.value
+    static BowlValue types[] = {
+        [BowlSymbolValue]    = &symbol_type.value,
+        [BowlListValue]      = &list_type.value,
+        [BowlNativeValue]    = &function_type.value,
+        [BowlMapValue]       = &map_type.value,
+        [BowlBooleanValue]   = &boolean_type.value,
+        [BowlNumberValue]    = &number_type.value,
+        [BowlStringValue]    = &string_type.value,
+        [BowlLibraryValue]   = &library_type.value,
+        [BowlVectorValue]    = &vector_type.value,
+        [BowlExceptionValue] = &exception_type.value
     };
     
-    LimeValue value;
-    LIME_STACK_POP_VALUE(stack, &value);
+    BowlValue value;
+    BOWL_STACK_POP_VALUE(stack, &value);
    
-    const LimeValue type = value == NULL ? types[LimeListValue] : types[value->type];
-    LIME_STACK_PUSH_VALUE(stack, type);
+    const BowlValue type = value == NULL ? types[BowlListValue] : types[value->type];
+    BOWL_STACK_PUSH_VALUE(stack, type);
 
     return NULL;
 }
 
-LimeValue kernel_hash(LimeStack stack) {
-    LimeValue value;
+BowlValue kernel_hash(BowlStack stack) {
+    BowlValue value;
 
-    LIME_STACK_POP_VALUE(stack, &value);
+    BOWL_STACK_POP_VALUE(stack, &value);
 
-    const u64 hash = lime_value_hash(value);
-    LIME_TRY(&value, lime_number(stack, (double) hash));
+    const u64 hash = bowl_value_hash(value);
+    BOWL_TRY(&value, bowl_number(stack, (double) hash));
 
-    LIME_STACK_PUSH_VALUE(stack, value);
+    BOWL_STACK_PUSH_VALUE(stack, value);
     return NULL;
 }
 
-LimeValue kernel_equals(LimeStack stack) {
-    LimeValue a;
-    LimeValue b;
+BowlValue kernel_equals(BowlStack stack) {
+    BowlValue a;
+    BowlValue b;
 
-    LIME_STACK_POP_VALUE(stack, &b);
-    LIME_STACK_POP_VALUE(stack, &a);
+    BOWL_STACK_POP_VALUE(stack, &b);
+    BOWL_STACK_POP_VALUE(stack, &a);
 
-    const bool equals = lime_value_equals(a, b);
-    LIME_TRY(&a, lime_boolean(stack, equals));
+    const bool equals = bowl_value_equals(a, b);
+    BOWL_TRY(&a, bowl_boolean(stack, equals));
 
-    LIME_STACK_PUSH_VALUE(stack, a);
+    BOWL_STACK_PUSH_VALUE(stack, a);
     return NULL;
 }
 
-LimeValue kernel_show(LimeStack stack) {
-    LimeValue value;
+BowlValue kernel_show(BowlStack stack) {
+    BowlValue value;
 
-    LIME_STACK_POP_VALUE(stack, &value);
+    BOWL_STACK_POP_VALUE(stack, &value);
 
     char *buffer;
     u64 length;
-    lime_value_show(value, &buffer, &length);
+    bowl_value_show(value, &buffer, &length);
 
     if (buffer == NULL) {
-        return lime_exception_out_of_heap;
+        return bowl_exception_out_of_heap;
     }
 
-    LimeResult result = lime_string(stack, (u8*) buffer, length);
+    BowlResult result = bowl_string(stack, (u8*) buffer, length);
     free(buffer);
 
     if (result.failure) {
         return result.exception;
     }
 
-    LIME_STACK_PUSH_VALUE(stack, result.value);
+    BOWL_STACK_PUSH_VALUE(stack, result.value);
     return NULL;
 }
 
-LimeValue kernel_trigger(LimeStack stack) {
-    LimeValue value;
+BowlValue kernel_trigger(BowlStack stack) {
+    BowlValue value;
     
-    LIME_STACK_POP_VALUE(stack, &value);
-    LIME_ASSERT_TYPE(value, LimeExceptionValue);
+    BOWL_STACK_POP_VALUE(stack, &value);
+    BOWL_ASSERT_TYPE(value, BowlExceptionValue);
 
     return value;
 }
 
-LimeValue kernel_library(LimeStack stack) {
-    LimeValue value;
+BowlValue kernel_library(BowlStack stack) {
+    BowlValue value;
 
-    LIME_STACK_POP_VALUE(stack, &value);
+    BOWL_STACK_POP_VALUE(stack, &value);
 
-    if (value == NULL || value->type != LimeStringValue) {
-        return lime_format_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", lime_value_type(value), __FUNCTION__).value;
+    if (value == NULL || value->type != BowlStringValue) {
+        return bowl_format_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", bowl_value_type(value), __FUNCTION__).value;
     }
 
-    char *path = lime_string_to_null_terminated(value);
+    char *path = bowl_string_to_null_terminated(value);
     if (path == NULL) {
-        return lime_exception_out_of_heap;
+        return bowl_exception_out_of_heap;
     }
 
-    LimeResult result = lime_library(stack, path);
+    BowlResult result = bowl_library(stack, path);
     free(path);
 
     if (result.failure) {
         return result.exception;
     }
 
-    LIME_STACK_PUSH_VALUE(stack, result.value);
+    BOWL_STACK_PUSH_VALUE(stack, result.value);
     return NULL;
 }
 
-LimeValue kernel_native(LimeStack stack) {
-    LimeValue symbol;
-    LimeValue library;
+BowlValue kernel_native(BowlStack stack) {
+    BowlValue symbol;
+    BowlValue library;
 
-    LIME_STACK_POP_VALUE(stack, &symbol);
-    LIME_STACK_POP_VALUE(stack, &library);
+    BOWL_STACK_POP_VALUE(stack, &symbol);
+    BOWL_STACK_POP_VALUE(stack, &library);
 
-    if (symbol == NULL || symbol->type != LimeStringValue) {
-        return lime_format_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", lime_value_type(symbol), __FUNCTION__).value;
+    if (symbol == NULL || symbol->type != BowlStringValue) {
+        return bowl_format_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'string')", bowl_value_type(symbol), __FUNCTION__).value;
     }
 
-    if (library == NULL || library->type != LimeLibraryValue) {
-        return lime_format_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'library')", lime_value_type(library), __FUNCTION__).value;
+    if (library == NULL || library->type != BowlLibraryValue) {
+        return bowl_format_exception(stack, "argument of illegal type '%s' provided in function '%s' (expected 'library')", bowl_value_type(library), __FUNCTION__).value;
     }
 
-    char *const symbol_name = lime_string_to_null_terminated(symbol);
+    char *const symbol_name = bowl_string_to_null_terminated(symbol);
     if (symbol_name == NULL) {
-        return lime_exception_out_of_heap;
+        return bowl_exception_out_of_heap;
     }
 
     #if defined(OS_UNIX)
-        const LimeFunction function = (LimeFunction) dlsym(library->library.handle, symbol_name);
+        const BowlFunction function = (BowlFunction) dlsym(library->library.handle, symbol_name);
     #elif defined(OS_WINDOWS)
-        const LimeFunction function = (LimeFunction) GetProcAddress(library->library.handle, symbol_name);
+        const BowlFunction function = (BowlFunction) GetProcAddress(library->library.handle, symbol_name);
     #else 
-        const LimeFunction function = NULL;
+        const BowlFunction function = NULL;
     #endif
 
     if (function == NULL) {
-        const LimeValue exception = lime_format_exception(stack, "failed to load native function '%s' from library in function '%s'", symbol_name, __FUNCTION__).value;
+        const BowlValue exception = bowl_format_exception(stack, "failed to load native function '%s' from library in function '%s'", symbol_name, __FUNCTION__).value;
         free(symbol_name);
         return exception;
     }
     
     free(symbol_name);
 
-    LIME_TRY(&symbol, lime_function(stack, library, function));
-    LIME_STACK_PUSH_VALUE(stack, symbol);
+    BOWL_TRY(&symbol, bowl_function(stack, library, function));
+    BOWL_STACK_PUSH_VALUE(stack, symbol);
 
     return NULL;
 }
 
-LimeValue kernel_run(LimeStack stack) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+BowlValue kernel_run(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
 
-    LimeValue datastack;
-    LimeValue callstack;
-    LimeValue dictionary;
+    BowlValue datastack;
+    BowlValue callstack;
+    BowlValue dictionary;
 
-    LIME_STACK_POP_VALUE(&frame, &datastack);
-    LIME_STACK_POP_VALUE(&frame, &callstack);
-    LIME_STACK_POP_VALUE(&frame, &dictionary);
+    BOWL_STACK_POP_VALUE(&frame, &datastack);
+    BOWL_STACK_POP_VALUE(&frame, &callstack);
+    BOWL_STACK_POP_VALUE(&frame, &dictionary);
 
     frame.datastack = &datastack;
     frame.callstack = &callstack;
     frame.dictionary = &dictionary;
 
-    if (datastack != NULL && datastack->type != LimeListValue) {
-        return lime_format_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(datastack), __FUNCTION__).value;
+    if (datastack != NULL && datastack->type != BowlListValue) {
+        return bowl_format_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", bowl_value_type(datastack), __FUNCTION__).value;
     }
 
-    if (callstack != NULL && callstack->type != LimeListValue) {
-        return lime_format_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", lime_value_type(callstack), __FUNCTION__).value;
+    if (callstack != NULL && callstack->type != BowlListValue) {
+        return bowl_format_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'list')", bowl_value_type(callstack), __FUNCTION__).value;
     }
 
-    if (dictionary == NULL || dictionary->type != LimeMapValue) {
-        return lime_format_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'map')", lime_value_type(dictionary), __FUNCTION__).value;
+    if (dictionary == NULL || dictionary->type != BowlMapValue) {
+        return bowl_format_exception(&frame, "argument of illegal type '%s' provided in function '%s' (expected 'map')", bowl_value_type(dictionary), __FUNCTION__).value;
     }
 
-    LimeResult result;
+    BowlResult result;
 
-    LimeValue exception = NULL;
+    BowlValue exception = NULL;
     while (callstack != NULL) {
-        const LimeValue instruction = callstack->list.head;
+        const BowlValue instruction = callstack->list.head;
         callstack = callstack->list.tail;
 
-        if (lime_settings_verbosity > 0) {
+        if (bowl_settings_verbosity > 0) {
             fputc('\n', stdout); 
         }
 
-        if (lime_settings_verbosity > 1) {
+        if (bowl_settings_verbosity > 1) {
             printf("[instruction] ");
-            lime_value_dump(stdout, instruction);
+            bowl_value_dump(stdout, instruction);
             fputc('\n', stdout);
             fflush(stdout);
         }
 
-        switch (instruction == NULL ? LimeListValue : instruction->type) {
-            case LimeSymbolValue:
+        switch (instruction == NULL ? BowlListValue : instruction->type) {
+            case BowlSymbolValue:
                 {
                     // look up the symbol in dictionary and push associated value to the callstack
-                    frame.registers[0] = lime_map_get_or_else(dictionary, instruction, lime_sentinel_value);
-                    if (frame.registers[0] == lime_sentinel_value) {
+                    frame.registers[0] = bowl_map_get_or_else(dictionary, instruction, bowl_sentinel_value);
+                    if (frame.registers[0] == bowl_sentinel_value) {
                         // symbol not found => push it to the datastack
-                        result = lime_list(&frame, instruction, datastack);
+                        result = bowl_list(&frame, instruction, datastack);
 
                         if (result.failure) {
                             exception = result.exception;
@@ -318,10 +318,10 @@ LimeValue kernel_run(LimeStack stack) {
                         }
 
                         datastack = result.value;
-                    } else if (frame.registers[0]->type == LimeListValue) {
+                    } else if (frame.registers[0]->type == BowlListValue) {
                         // push the associated list to the callstack
                         while (frame.registers[0] != NULL) {
-                            result = lime_list(&frame, frame.registers[0]->list.head, callstack);
+                            result = bowl_list(&frame, frame.registers[0]->list.head, callstack);
 
                             if (result.failure) {
                                 exception = result.exception;
@@ -331,14 +331,14 @@ LimeValue kernel_run(LimeStack stack) {
                             callstack = result.value;
                             frame.registers[0] = frame.registers[0]->list.tail;
                         }
-                    } else if (frame.registers[0]->type == LimeNativeValue) {
-                        const LimeFunction function = frame.registers[0]->function.function;
+                    } else if (frame.registers[0]->type == BowlNativeValue) {
+                        const BowlFunction function = frame.registers[0]->function.function;
                         exception = function(&frame);
                         if (exception != NULL) {
                             goto exception_break_point;    
                         }
                     } else {
-                        result = lime_list(&frame, frame.registers[0], callstack);
+                        result = bowl_list(&frame, frame.registers[0], callstack);
 
                         if (result.failure) {
                             exception = result.exception;
@@ -350,7 +350,7 @@ LimeValue kernel_run(LimeStack stack) {
                 }
                 break;
             default:
-                result = lime_list(&frame, instruction, datastack);
+                result = bowl_list(&frame, instruction, datastack);
 
                 if (result.failure) {
                     exception = result.exception;
@@ -361,8 +361,8 @@ LimeValue kernel_run(LimeStack stack) {
                 break;
         }
 
-        if (lime_settings_verbosity > 0) {
-            lime_value_dump(stdout, datastack);
+        if (bowl_settings_verbosity > 0) {
+            bowl_value_dump(stdout, datastack);
             fputc('\n', stdout);
             fflush(stdout);
         }
@@ -379,37 +379,37 @@ LimeValue kernel_run(LimeStack stack) {
     frame.registers[1] = exception;
     frame.registers[2] = dictionary;
 
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[2]);
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[2]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[0]);
 
     return NULL;
 }
 
-LimeValue kernel_lift(LimeStack stack) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, *stack->datastack, NULL, NULL);
+BowlValue kernel_lift(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, *stack->datastack, NULL, NULL);
     
     *frame.datastack = NULL;
-    LIME_STACK_PUSH_VALUE(&frame, *frame.dictionary);
-    LIME_STACK_PUSH_VALUE(&frame, *frame.callstack);
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]);
+    BOWL_STACK_PUSH_VALUE(&frame, *frame.dictionary);
+    BOWL_STACK_PUSH_VALUE(&frame, *frame.callstack);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[0]);
     
     return NULL;
 }
 
-LimeValue kernel_continue(LimeStack stack) {
-    LimeValue datastack;
-    LimeValue callstack;
-    LimeValue dictionary;
+BowlValue kernel_continue(BowlStack stack) {
+    BowlValue datastack;
+    BowlValue callstack;
+    BowlValue dictionary;
 
-    LIME_STACK_POP_VALUE(stack, &datastack);
-    LIME_ASSERT_TYPE(datastack, LimeListValue);
+    BOWL_STACK_POP_VALUE(stack, &datastack);
+    BOWL_ASSERT_TYPE(datastack, BowlListValue);
 
-    LIME_STACK_POP_VALUE(stack, &callstack);
-    LIME_ASSERT_TYPE(callstack, LimeListValue);
+    BOWL_STACK_POP_VALUE(stack, &callstack);
+    BOWL_ASSERT_TYPE(callstack, BowlListValue);
 
-    LIME_STACK_POP_VALUE(stack, &dictionary);
-    LIME_ASSERT_TYPE(dictionary, LimeMapValue);
+    BOWL_STACK_POP_VALUE(stack, &dictionary);
+    BOWL_ASSERT_TYPE(dictionary, BowlMapValue);
 
     *stack->datastack = datastack;
     *stack->callstack = callstack;
@@ -418,43 +418,43 @@ LimeValue kernel_continue(LimeStack stack) {
     return NULL;
 }
 
-LimeValue kernel_tokens(LimeStack stack) {
-    LimeValue string;
+BowlValue kernel_tokens(BowlStack stack) {
+    BowlValue string;
 
-    LIME_STACK_POP_VALUE(stack, &string);
-    LIME_TRY(&string, lime_tokens(stack, string));
-    LIME_STACK_PUSH_VALUE(stack, string);
+    BOWL_STACK_POP_VALUE(stack, &string);
+    BOWL_TRY(&string, bowl_tokens(stack, string));
+    BOWL_STACK_PUSH_VALUE(stack, string);
     
     return NULL;
 }
 
-LimeValue kernel_swap(LimeStack stack) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+BowlValue kernel_swap(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
 
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[1]);
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]);
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
-
-    return NULL;
-}
-
-LimeValue kernel_rot(LimeStack stack) {
-    LimeStackFrame frame = LIME_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
-
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[0]);
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[1]);
-    LIME_STACK_POP_VALUE(&frame, &frame.registers[2]);
-
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[0]);
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[2]);
-    LIME_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[1]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[0]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[1]);
 
     return NULL;
 }
 
-LimeValue kernel_drop(LimeStack stack) {
-    LimeValue value;
-    LIME_STACK_POP_VALUE(stack, &value);
+BowlValue kernel_rot(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[1]);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[2]);
+
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[0]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[2]);
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+
+    return NULL;
+}
+
+BowlValue kernel_drop(BowlStack stack) {
+    BowlValue value;
+    BOWL_STACK_POP_VALUE(stack, &value);
     return NULL;
 }

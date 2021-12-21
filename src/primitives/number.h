@@ -1,24 +1,24 @@
 #ifndef KERNEL_NUMBER_H
 #define KERNEL_NUMBER_H
 
-#include <lime/api.h>
+#include <bowl/api.h>
 
-LimeValue kernel_number_add(LimeStack stack);
+BowlValue kernel_number_add(BowlStack stack);
 
-LimeValue kernel_number_subtract(LimeStack stack);
+BowlValue kernel_number_subtract(BowlStack stack);
 
-LimeValue kernel_number_multiply(LimeStack stack);
+BowlValue kernel_number_multiply(BowlStack stack);
 
-LimeValue kernel_number_divide(LimeStack stack);
+BowlValue kernel_number_divide(BowlStack stack);
 
-LimeValue kernel_number_remainder(LimeStack stack);
+BowlValue kernel_number_remainder(BowlStack stack);
 
-LimeValue kernel_number_less_than(LimeStack stack);
+BowlValue kernel_number_less_than(BowlStack stack);
 
-LimeValue kernel_number_less_equal(LimeStack stack);
+BowlValue kernel_number_less_equal(BowlStack stack);
 
-LimeValue kernel_number_greater_than(LimeStack stack);
+BowlValue kernel_number_greater_than(BowlStack stack);
 
-LimeValue kernel_number_greater_equal(LimeStack stack);
+BowlValue kernel_number_greater_equal(BowlStack stack);
 
 #endif

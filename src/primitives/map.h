@@ -1,20 +1,20 @@
 #ifndef KERNEL_MAP_H
 #define KERNEL_MAP_H
 
-#include <lime/api.h>
+#include <bowl/api.h>
 
-LimeValue kernel_map_length(LimeStack stack);
+BowlValue kernel_map_length(BowlStack stack);
 
-LimeValue kernel_map_empty(LimeStack stack);
+BowlValue kernel_map_empty(BowlStack stack);
 
-LimeValue kernel_map_put(LimeStack stack);
+BowlValue kernel_map_put(BowlStack stack);
 
-LimeValue kernel_map_get(LimeStack stack);
+BowlValue kernel_map_get(BowlStack stack);
 
-LimeValue kernel_map_del(LimeStack stack);
+BowlValue kernel_map_del(BowlStack stack);
 
-LimeValue kernel_map_merge(LimeStack stack);
+BowlValue kernel_map_merge(BowlStack stack);
 
-LimeValue kernel_map_contains(LimeStack stack);
+BowlValue kernel_map_contains(BowlStack stack);
 
 #endif
