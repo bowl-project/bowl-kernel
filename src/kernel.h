@@ -11,11 +11,6 @@
 #include "primitives/vector.h"
 #include "primitives/exception.h"
 
-typedef struct {
-    char *name;
-    BowlFunction function;
-} KernelFunctionEntry;
-
 /**
  * Tokenizes the topmost value on the stack and pushes the resulting list.
  * @param stack The stack of the current environment.

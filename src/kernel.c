@@ -1,6 +1,6 @@
 #include "kernel.h"
 
-static KernelFunctionEntry kernel_functions[] = {
+static BowlFunctionEntry kernel_functions[] = {
     { .name = "run", .function = kernel_run },
     { .name = "dup", .function = kernel_dup },
     { .name = "type", .function = kernel_type },
@@ -72,16 +72,7 @@ static KernelFunctionEntry kernel_functions[] = {
 
 BowlValue bowl_module_initialize(BowlStack stack, BowlValue library) {
     BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, library, NULL, NULL);
-
-    for (u64 i = 0; i < sizeof(kernel_functions) / sizeof(kernel_functions[0]); ++i) {
-        KernelFunctionEntry *const entry = &kernel_functions[i];
-        const BowlValue exception = bowl_register_function(&frame, entry->name, frame.registers[0], entry->function);
-        if (exception != NULL) {
-            return exception;
-        }
-    }
-
-    return NULL;    
+    return bowl_register_all(&frame, frame.registers[0], kernel_functions, sizeof(kernel_functions) / sizeof(kernel_functions[0]));
 }
 
 BowlValue bowl_module_finalize(BowlStack stack, BowlValue library) {
