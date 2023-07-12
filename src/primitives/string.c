@@ -1,14 +1,23 @@
 #include "string.h"
 
-BowlValue kernel_string_length(BowlStack stack) {
-    BowlValue string;
+BowlValue kernel_string_symbol(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
 
-    BOWL_STACK_POP_VALUE(stack, &string);
-    BOWL_ASSERT_TYPE(string, BowlStringValue);
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    BOWL_ASSERT_TYPE(frame.registers[0], BowlStringValue);
 
-    BOWL_TRY(&string, bowl_number(stack, string->string.length));
-    BOWL_STACK_PUSH_VALUE(stack, string);
+    const u64 length = frame.registers[0]->string.length;
+    for (u64 i = 0; i < length; ++i) {
+        if (unicode_is_space(frame.registers[0]->string.codepoints[i])) {
+            return bowl_format_exception(&frame, "illegal format in function '%s' (whitespace is not allowed inside symbols)", __FUNCTION__).value;
+        }
+    }
 
+    BOWL_TRY(&frame.registers[1], bowl_allocate(&frame, BowlSymbolValue, length * sizeof(u32)));
+    memcpy(&frame.registers[1]->symbol.codepoints[0], &frame.registers[0]->string.codepoints[0], length * sizeof(u32));
+    frame.registers[1]->symbol.length = length;
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[1]);
+    
     return NULL;
 }
 
@@ -22,10 +31,11 @@ BowlValue kernel_string_concat(BowlStack stack) {
     BOWL_ASSERT_TYPE(frame.registers[0], BowlStringValue);
 
     const u64 length = frame.registers[0]->string.length + frame.registers[1]->string.length;
-    BOWL_TRY(&frame.registers[2], bowl_allocate(&frame, BowlStringValue, length));
+    BOWL_TRY(&frame.registers[2], bowl_allocate(&frame, BowlStringValue, length * sizeof(u32)));
     frame.registers[2]->string.length = length;
-    memcpy(frame.registers[2]->string.bytes, frame.registers[0]->string.bytes, frame.registers[0]->string.length);
-    memcpy(&frame.registers[2]->string.bytes[frame.registers[0]->string.length], frame.registers[1]->string.bytes, frame.registers[1]->string.length);
+
+    memcpy(&frame.registers[2]->string.codepoints[0], &frame.registers[0]->string.codepoints[0], frame.registers[0]->string.length * sizeof(u32));
+    memcpy(&frame.registers[2]->string.codepoints[frame.registers[0]->string.length], &frame.registers[1]->string.codepoints[0], frame.registers[1]->string.length * sizeof(u32));
 
     BOWL_STACK_PUSH_VALUE(&frame, frame.registers[2]);
 
@@ -61,83 +71,42 @@ BowlValue kernel_string_slice(BowlStack stack) {
         return bowl_format_exception(&frame, "length exceeds string bounds in function '%s' (expected length to be not greater than %" PRId64 " but %" PRId64 " was given)", __FUNCTION__, frame.registers[0]->string.length - start_index, slice_length).value;
     }
 
-    BOWL_TRY(&frame.registers[1], bowl_allocate(&frame, BowlStringValue, slice_length));
+    BOWL_TRY(&frame.registers[1], bowl_allocate(&frame, BowlStringValue, slice_length * sizeof(u32)));
     frame.registers[1]->string.length = slice_length;
-    memcpy(frame.registers[1]->string.bytes, &frame.registers[0]->string.bytes[start_index], slice_length);
+    memcpy(&frame.registers[1]->string.codepoints[0], &frame.registers[0]->string.codepoints[start_index], slice_length * sizeof(u32));
     BOWL_STACK_PUSH_VALUE(&frame, frame.registers[1]);
 
     return NULL;
 }
 
-BowlValue kernel_string_number(BowlStack stack) {
-    BowlValue string;
-
-    BOWL_STACK_POP_VALUE(stack, &string);
-    BOWL_ASSERT_TYPE(string, BowlStringValue);
-
-    char content[512];
-
-    if (string->string.length > sizeof(content) / sizeof(content[0])) {
-        // no number is larger than the size of the buffer, i.e. the string cannot be well-formed
-        return bowl_format_exception(stack, "illegal format in function '%s' (expected numeric string)", __FUNCTION__).value;
-    }
-
-    memcpy(&content[0], &string->string.bytes[0], string->string.length);
-
-    char *const start = &content[0];
-    char *end;
-
-    const double result = strtod(start, &end);
-    if (end - start != string->string.length) {
-        return bowl_format_exception(stack, "illegal format in function '%s' (expected numeric string)", __FUNCTION__).value;
-    }
-
-    BOWL_TRY(&string, bowl_number(stack, result));
-    BOWL_STACK_PUSH_VALUE(stack, string);
-
-    return NULL;
-}
-
-BowlValue kernel_string_boolean(BowlStack stack) {
-    BowlValue string;
-
-    BOWL_STACK_POP_VALUE(stack, &string);
-    BOWL_ASSERT_TYPE(string, BowlStringValue);
-
-    bool value;
-    if (string->string.length == sizeof("true") - 1 && memcmp(string->string.bytes, "true", sizeof("true") - 1) == 0) {
-        value = true;
-    } else if (string->string.length == sizeof("false") - 1 && memcmp(string->string.bytes, "false", sizeof("false") - 1) == 0) {
-        value = false;
-    } else {
-        return bowl_format_exception(stack, "illegal format in function '%s' (expected either 'true' or 'false')", __FUNCTION__).value;
-    }
-
-    BOWL_TRY(&string, bowl_boolean(stack, value));
-    BOWL_STACK_PUSH_VALUE(stack, string);
-
-    return NULL;
-}
-
-BowlValue kernel_string_symbol(BowlStack stack) {
+BowlValue kernel_string_length(BowlStack stack) {
     BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
 
     BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
     BOWL_ASSERT_TYPE(frame.registers[0], BowlStringValue);
 
-    const u64 length = frame.registers[0]->string.length;
-    u8 *const bytes = &frame.registers[0]->string.bytes[0];
-    for (u64 i = 0; i < length; ++i) {
-        if (isspace(bytes[i])) {
-            return bowl_format_exception(&frame, "illegal format in function '%s' (a symbol may not contain whitespace)", __FUNCTION__).value;
-        }
+    BOWL_TRY(&frame.registers[0], bowl_number(&frame, (double) frame.registers[0]->string.length));
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[0]);
+
+    return NULL;
+}
+
+BowlValue kernel_string_char(BowlStack stack) {
+    BowlStackFrame frame = BOWL_ALLOCATE_STACK_FRAME(stack, NULL, NULL, NULL);
+
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[1]);
+    BOWL_ASSERT_TYPE(frame.registers[1], BowlNumberValue);
+    const s64 index = (s64) frame.registers[1]->number.value;
+
+    BOWL_STACK_POP_VALUE(&frame, &frame.registers[0]);
+    BOWL_ASSERT_TYPE(frame.registers[0], BowlStringValue);
+    const u64 length = (u64) frame.registers[0]->string.length;
+
+    if (index < 0 || index >= length) {
+        return bowl_format_exception(&frame, "index out of bounds in function '%s' (attempt to access character %" PRId64 " in string of length %" PRIu64 ")", __FUNCTION__, index, length).value;
     }
 
-    BOWL_TRY(&frame.registers[1], bowl_allocate(&frame, BowlSymbolValue, length));
-    frame.registers[1]->symbol.length = length;
-    memcpy(frame.registers[1]->symbol.bytes, frame.registers[0]->string.bytes, length);
-
-    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[1]);
-
+    BOWL_TRY(&frame.registers[2], bowl_number(&frame, frame.registers[0]->string.codepoints[index]));
+    BOWL_STACK_PUSH_VALUE(&frame, frame.registers[2]);
     return NULL;
 }

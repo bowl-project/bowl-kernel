@@ -1,0 +1,19 @@
+
+quote string:join
+"( strings separator -- string )"
+"swap dup list:empty equals" tokens 
+    "swap drop" tokens list:append
+    "list:pop rot dup list:empty equals" tokens 
+        "drop drop" tokens list:append
+        "swap dup rot string:join rot string:concat swap string:concat" tokens list:append
+    "boolean:choose call" tokens list:concat list:append
+"boolean:choose call" tokens list:concat
+register
+
+quote string:startsWith
+" ( string prefix -- boolean ) "
+"dup rot string:length swap dup rot string:length number:less-equal" tokens
+    "swap dup rot string:length 0 string:slice equals" tokens list:append
+    "drop drop false" tokens list:append
+"boolean:choose call" tokens list:concat
+register

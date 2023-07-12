@@ -1,0 +1,42 @@
+
+quote list:append
+"( xs x -- xs+x )"
+"list:empty swap list:push list:concat" tokens
+register
+
+quote list:map
+"( xs ( x -- y ) -- ys )"
+"swap dup list:empty equals" tokens 
+    "swap drop" tokens list:append 
+    "list:pop swap rot swap dup rot call rot list:map swap list:push" tokens list:append 
+"boolean:choose call" tokens list:concat
+register
+
+quote list:join
+"( xs separator -- xs )"
+"swap dup list:empty equals" tokens 
+    "swap drop" tokens list:append
+    "list:pop rot dup list:empty equals" tokens 
+        "drop drop" tokens list:append
+        "swap dup rot list:join rot list:concat swap list:concat" tokens list:append
+    "boolean:choose call" tokens list:concat list:append
+"boolean:choose call" tokens list:concat
+register
+
+quote list:bind
+"( xs ( x -- ys ) -- zs )"
+"list:map list:empty list:join" tokens
+register
+
+quote list:foldr
+"( xs v ( x v -- v ) -- v )"
+"rot rot dup list:empty equals" tokens
+    "drop drop" tokens list:append
+    "list:pop rot-4 rot dup rot-4 list:foldr swap call" tokens list:append
+"boolean:choose call" tokens list:concat
+register
+
+quote list:foldl
+"( xs v ( v x -- v ) -- v )"
+"rot rot list:reverse rot quote swap list:push list:foldr" tokens
+register

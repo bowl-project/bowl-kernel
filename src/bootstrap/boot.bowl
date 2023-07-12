@@ -1,0 +1,75 @@
+lift
+    rot rot
+    "register" string:symbol
+    list:empty
+    "Register the provided symbol in the dictionary by associating it with the given program.\n\nStack behavior: ( symbol documentation program -- )"
+    list:push
+    "lift swap rot dup rot list:pop swap list:pop swap rot list:empty swap list:push swap list:reverse list:push swap list:pop swap drop swap map:put rot list:pop drop list:pop drop list:pop drop swap dup list:length 37 number:subtract 37 list:slice swap continue"
+    tokens list:reverse
+    list:push
+    map:put
+    rot
+    swap dup list:length 22 number:subtract 22 list:slice swap
+continue
+
+"continuation" string:symbol
+"Creates a new continuation from the provided program. That is, the program is interpreted as a meta-program and surrounded by the appropriate 'lift' and 'continue' calls.\n\nStack behavior: ( program -- program )"
+"dup list:length 9 number:add show \"lift swap dup list:length \" swap dup rot string:concat \" number:subtract \" string:concat swap string:concat \" list:slice swap\" string:concat tokens swap list:concat \"continue\" tokens list:concat" tokens
+register
+
+"quote" string:symbol
+"Escape the next symbol from the callstack and push it to the datastack.\n\nStack behavior: ( -- next )"
+"swap list:pop swap rot list:push" tokens continuation
+register
+
+quote datastack
+"Return the current datastack.\n\nStack behavior: ( -- datastack )"
+"dup list:push" tokens continuation
+register
+
+quote callstack
+"Return the current callstack.\n\nStack behavior: ( -- callstack )"
+"swap dup rot list:push" tokens continuation
+register
+
+quote dictionary
+"Return the current dictionary.\n\nStack behavior: ( -- dictionary )"
+"rot rot dup rot list:push swap rot" tokens continuation
+register
+
+quote register-value
+"Register the provided symbol in the dictionary by associating it with the given value.\n\nStack behavior: ( symbol documentation value -- )"
+"swap rot dup rot list:pop swap list:pop swap rot list:empty swap list:push swap list:empty swap list:push \"swap list:pop swap rot list:push\" tokens continuation swap list:concat list:reverse list:push swap list:pop swap drop swap map:put rot list:pop drop list:pop drop list:pop drop" 
+tokens continuation
+register
+
+"call" string:symbol
+"Call the provided program before continuing with the rest of the callstack.\n\nStack behavior: ( program -- )"
+"list:pop rot rot list:concat swap" tokens continuation
+register
+
+quote apply
+"Call the provided program with a fresh datastack only containing the previously topmost element.\n\nStack behavior: ( argument program -- result )"
+"list:empty rot rot list:push dictionary rot run rot dup list:empty equals" tokens
+    list:empty "drop drop list:pop swap drop" tokens list:push list:concat
+    list:empty "swap drop swap drop trigger" tokens list:push list:concat
+"boolean:choose call" tokens 
+list:concat
+register
+
+quote rot-4
+"( u v w x -- x u v w )"
+"rot list:empty swap list:push swap list:push swap rot list:pop swap list:pop swap drop" tokens
+register
+
+quote include 
+"Loads and executes the provided file before continuing with the rest of the callstack.\n\nStack behavior: ( path -- )"
+"io:read tokens call" tokens
+register
+
+"./src/bootstrap/list.bowl" include
+"./src/bootstrap/string.bowl" include
+"./src/bootstrap/parser.bowl" include
+
+
+
