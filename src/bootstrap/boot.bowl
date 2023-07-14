@@ -37,7 +37,7 @@ quote dictionary
 "rot rot dup rot list:push swap rot" tokens continuation
 register
 
-quote register-value
+quote registerValue
 "Register the provided symbol in the dictionary by associating it with the given value.\n\nStack behavior: ( symbol documentation value -- )"
 "swap rot dup rot list:pop swap list:pop swap rot list:empty swap list:push swap list:empty swap list:push \"swap list:pop swap rot list:push\" tokens continuation swap list:concat list:reverse list:push swap list:pop swap drop swap map:put rot list:pop drop list:pop drop list:pop drop" 
 tokens continuation
@@ -46,7 +46,7 @@ register
 "call" string:symbol
 "Call the provided program before continuing with the rest of the callstack.\n\nStack behavior: ( program -- )"
 "list:pop rot rot list:concat swap" tokens continuation
-register
+register  
 
 quote apply
 "Call the provided program with a fresh datastack only containing the previously topmost element.\n\nStack behavior: ( argument program -- result )"
@@ -69,7 +69,225 @@ register
 
 "./src/bootstrap/list.bowl" include
 "./src/bootstrap/string.bowl" include
-"./src/bootstrap/parser.bowl" include
 
+quote primitive:parseListLiteral
+"Parse a list literal.\n\nStack behavior: ( tokens [] -- tokens literal )"
+"swap dup list:empty equals" tokens 
+    "\"missing closing bracket ']'\" exception trigger" tokens list:append
+    "list:pop dup quote ] equals" tokens 
+        "drop swap" tokens list:append
+        "dup quote [ equals" tokens 
+            "drop list:empty primitive:parseListLiteral list:reverse swap rot list:push primitive:parseListLiteral" tokens list:append 
+            "swap rot list:push primitive:parseListLiteral" tokens list:append 
+        "boolean:choose call" tokens list:concat list:append
+    "boolean:choose call" tokens list:concat list:append
+"boolean:choose call" tokens list:concat
+register
 
+quote [
+"Escape the callstack until a closing bracket is hit and return these quoted elements as a list.\n\nStack behavior: ( -- quoted )"
+"swap list:empty primitive:parseListLiteral list:reverse swap rot list:push" tokens continuation 
+register
 
+quote assertNonEmpty
+"Asserts that the topmost value is a non-empty list and throws an exception otherwise."
+[ 
+    dup [ ] equals  
+    [ "empty list (expected a non-empty list)" exception trigger ]
+    [ ]
+    boolean:choose call
+]
+register
+
+quote assertListLiteral
+"Asserts that the topmost value begins with a list literal.\n\nStack behavior: ( value -- rest literal )"
+[
+    assertNonEmpty
+    list:pop dup "[" string:symbol equals 
+    [ drop list:empty primitive:parseListLiteral list:reverse ]
+    [ "unexpected token '" swap show string:concat "', expected '['" string:concat exception trigger ]
+    boolean:choose call
+]
+register
+
+quote assertType
+"Asserts that the topmost value has the provided type and throws an exception otherwise."
+[
+    swap dup rot type swap dup rot equals
+    [ drop ]
+    [ "expected a value of type '" swap string:concat "' but got a value of type '" string:concat swap dup rot type string:concat "'" string:concat exception trigger ]
+    boolean:choose call
+]
+register
+
+quote primitive:parseIf
+"Parse an 'if' control structure using the topmost value.\n\nStack behavior: ( tokens -- tokens program )"
+[
+    assertListLiteral swap
+    assertNonEmpty list:pop "then" string:symbol equals [ ] [ "unexpected token, expected 'then'" exception trigger ] boolean:choose call
+    assertListLiteral swap
+    assertNonEmpty list:pop "else" string:symbol equals [ ] [ "unexpected token, expected 'else'" exception trigger ] boolean:choose call
+    assertNonEmpty list:pop dup "if" string:symbol equals
+        [ drop primitive:parseIf swap ]
+        [ list:push assertListLiteral swap ] 
+    boolean:choose call
+
+    rot-4 rot 
+    list:append swap list:append
+    [ boolean:choose call ] list:concat
+]
+register
+
+quote if 
+"A control structure which expects three programs on the following callstack. Depending on the topmost value on the datastack after
+executing the first program (which must return a boolean), it either chooses the second or the third program as the continuation.
+\nStack behavior: ( boolean -- a|b )"
+[ swap primitive:parseIf swap list:concat swap ] continuation
+register
+
+"./../bowl-system/system.so" library drop
+
+quote unfold
+""
+[   
+    swap rot 
+    list:pop swap rot
+    swap dup rot swap [ ] map:get
+    list:pop swap drop
+    swap rot list:push
+    swap rot
+] continuation
+register
+
+quote compileExclude
+"Compile the given program, excluding any symbol used as key in the provided map.\n\nStack behavior: ( exclude program -- program )"
+[
+    dup type "symbol" equals
+    [
+        "[compile] compiling symbol '" io:print dup show io:print "'\n" io:print 
+        dup "lift" string:symbol equals
+        [ "cannot compile symbol 'lift'" exception trigger ]
+        [ ]
+        boolean:choose call
+
+        dup rot swap dup rot swap map:contains
+        [
+             drop
+        ]
+        [
+            swap dup unfold rot [ ] map:put swap compileExclude
+        ]
+        boolean:choose call
+    ] 
+    [
+        dup type "list" equals
+        [
+            "[compile] compiling list '" io:print dup show io:print "'\n" io:print 
+            dup list:empty equals
+            [ swap drop ]
+
+            [ 
+                list:pop rot rot dup rot swap 
+                dup type "symbol" equals
+                [
+                    compileExclude dup type "list" equals
+                    [ 
+                        "[compile] prepending program ...\n" io:print
+                        rot swap compileExclude list:concat 
+                    ]
+                    [
+                        "[compile] inserting symbol ...\n" io:print
+                        rot swap compileExclude swap list:push 
+                    ]
+                    boolean:choose call
+                ]
+                [
+                    compileExclude rot swap compileExclude swap list:push 
+                ]
+                boolean:choose call
+            ]
+            boolean:choose call
+        ]
+        [
+            swap drop
+        ]
+        boolean:choose call
+    ]
+    boolean:choose call
+]
+register
+
+quote compile
+"Compile the given program by unfolding as much symbols as possible."
+[ map:empty swap compileExclude ]
+register
+
+"
+A lift cannot simply be unfolded:
+[ a b c lift i j k ... continue x y z ]
+
+yields
+
+ds := a b c
+cs := i j k ... continue x y z
+dc := current
+
+I think we have to run the 'lift' call in order to change the future of the program. 
+However, we do not want to mutate state during compilation. 
+So, we probably need to run the lift in a new 'run' instance and ...
+- use the resulting datastack as the new "compiled" prefix
+- use the mutated callstack for further compilation (which has to be passed via the datastack, as 'run' only returns an exception)
+- use the new dictionary from this point on in the compiled program
+
+There are, however, problems, when ...
+a) The compiled prefix is not sufficiently large enough for the lift-opertation (i.e., the program is only partial)
+b) The "to be compiled" suffix does not end in an continue (i.e., the program is only partial)
+
+That is, only closed programs can be compiled ...
+
+" drop
+
+[ "hallo" io:print "\n" io:print ] compile dup show io:print "\n"
+"\n\n" io:print
+
+quote environment
+""
+map:empty
+quote cd
+[ "" ] [
+    dup type "string" equals 
+    [ ]
+    [ show ]
+    boolean:choose call
+    system:chdir
+]
+list:push
+map:put
+registerValue
+
+quote prompt
+""
+[
+    system:dir io:print "> " io:print io:scan
+    tokens dup list:empty equals 
+    [ drop ]
+    [
+        list:pop list:empty swap list:push environment rot swap
+        run 
+        rot rot drop swap dup list:empty equals 
+        [
+            drop 
+            show io:print "\n" io:print
+        ]
+        [
+            swap drop
+            exception:message io:print "\n" io:print
+        ]
+        boolean:choose call
+    ]
+    boolean:choose call
+    prompt
+]
+register
+
+prompt 0 system:exit

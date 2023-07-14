@@ -18,6 +18,8 @@ static BowlFunctionEntry kernel_functions[] = {
     { .name = "rot", .documentation = "", .function = kernel_rot },
     { .name = "drop", .documentation = "", .function = kernel_drop },
 
+    { .name = "exception:message", .documentation = "", .function = kernel_exception_message },
+
     { .name = "list:length", .documentation = "", .function = kernel_list_length },
     { .name = "list:empty", .documentation = "", .function = kernel_list_empty },
     { .name = "list:push", .documentation = "", .function = kernel_list_push },
@@ -312,7 +314,7 @@ BowlValue kernel_run(BowlStack stack) {
                 // fetch the value from the entry
                 frame.registers[0] = frame.registers[0]->list.head;
 
-                if (frame.registers[0]->type == BowlListValue) {
+                if (frame.registers[0] == NULL || frame.registers[0]->type == BowlListValue) {
                     // push the associated list to the callstack
                     while (frame.registers[0] != NULL) {
                         result = bowl_list(&frame, frame.registers[0]->list.head, callstack);
