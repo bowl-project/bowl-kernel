@@ -4,6 +4,14 @@ quote list:append
 "list:empty swap list:push list:concat" tokens
 register
 
+quote list:each
+"( xs (x -- ) -- )"
+"swap dup list:empty equals" tokens
+    "drop drop" tokens list:append
+    "list:pop rot rot dup rot call list:each" tokens list:append
+"boolean:choose call" tokens list:concat
+register
+
 quote list:map
 "( xs ( x -- y ) -- ys )"
 "swap dup list:empty equals" tokens 

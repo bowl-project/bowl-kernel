@@ -310,12 +310,18 @@ BowlValue kernel_run(BowlStack stack) {
                     datastack = result.value;
                     break;
                 }
-                
+
+                // each entry is represented as a tuple (i.e., a list of two elements)
+                if (frame.registers[0] == NULL || frame.registers[0]->type != BowlListValue || frame.registers[0]->list.length != 2) {
+                    exception = bowl_format_exception(&frame, "illegal dictionary entry").value;
+                    goto exception_break_point;
+                }
+
                 // fetch the value from the entry
                 frame.registers[0] = frame.registers[0]->list.head;
 
                 if (frame.registers[0] == NULL || frame.registers[0]->type == BowlListValue) {
-                    // push the associated list to the callstack
+                    // push the program to the callstack
                     while (frame.registers[0] != NULL) {
                         result = bowl_list(&frame, frame.registers[0]->list.head, callstack);
 
@@ -326,12 +332,6 @@ BowlValue kernel_run(BowlStack stack) {
 
                         callstack = result.value;
                         frame.registers[0] = frame.registers[0]->list.tail;
-                    }
-                } else if (frame.registers[0]->type == BowlNativeValue) {
-                    const BowlFunction function = frame.registers[0]->function.function;
-                    exception = function(&frame);
-                    if (exception != NULL) {
-                        goto exception_break_point;    
                     }
                 } else {
                     result = bowl_list(&frame, frame.registers[0], callstack);
@@ -346,7 +346,16 @@ BowlValue kernel_run(BowlStack stack) {
 
                 break;
 
+            case BowlNativeValue:
+                // call the native function
+                exception = instruction->function.function(&frame);
+                if (exception != NULL) {
+                    goto exception_break_point;    
+                }
+                break;
+
             default:
+                // any other value is moved to the datastack
                 result = bowl_list(&frame, instruction, datastack);
 
                 if (result.failure) {
@@ -356,6 +365,7 @@ BowlValue kernel_run(BowlStack stack) {
 
                 datastack = result.value;
                 break;
+
         }
 
         if (bowl_settings_verbosity > 2) {

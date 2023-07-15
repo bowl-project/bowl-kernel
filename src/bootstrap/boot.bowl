@@ -165,14 +165,9 @@ quote compileExclude
     dup type "symbol" equals
     [
         "[compile] compiling symbol '" io:print dup show io:print "'\n" io:print 
-        dup "lift" string:symbol equals
-        [ "cannot compile symbol 'lift'" exception trigger ]
-        [ ]
-        boolean:choose call
-
         dup rot swap dup rot swap map:contains
         [
-             drop
+            drop
         ]
         [
             swap dup unfold rot [ ] map:put swap compileExclude
@@ -185,7 +180,6 @@ quote compileExclude
             "[compile] compiling list '" io:print dup show io:print "'\n" io:print 
             dup list:empty equals
             [ swap drop ]
-
             [ 
                 list:pop rot rot dup rot swap 
                 dup type "symbol" equals
@@ -218,50 +212,18 @@ quote compileExclude
 register
 
 quote compile
-"Compile the given program by unfolding as much symbols as possible."
+"Compile the given program by unfolding as much symbols as possible. At the moment, this function also compiles metaprograms which leads to unexpected behavior when these metaprograms mutate the rest of the program."
 [ map:empty swap compileExclude ]
 register
 
-"
-A lift cannot simply be unfolded:
-[ a b c lift i j k ... continue x y z ]
-
-yields
-
-ds := a b c
-cs := i j k ... continue x y z
-dc := current
-
-I think we have to run the 'lift' call in order to change the future of the program. 
-However, we do not want to mutate state during compilation. 
-So, we probably need to run the lift in a new 'run' instance and ...
-- use the resulting datastack as the new "compiled" prefix
-- use the mutated callstack for further compilation (which has to be passed via the datastack, as 'run' only returns an exception)
-- use the new dictionary from this point on in the compiled program
-
-There are, however, problems, when ...
-a) The compiled prefix is not sufficiently large enough for the lift-opertation (i.e., the program is only partial)
-b) The "to be compiled" suffix does not end in an continue (i.e., the program is only partial)
-
-That is, only closed programs can be compiled ...
-
-" drop
-
-[ "hallo" io:print "\n" io:print ] compile dup show io:print "\n"
-"\n\n" io:print
-
-quote environment
+quote commands
 ""
 map:empty
 quote cd
-[ "" ] [
-    dup type "string" equals 
-    [ ]
-    [ show ]
-    boolean:choose call
+[
+    dup type "string" equals [ ] [ show ] boolean:choose call
     system:chdir
 ]
-list:push
 map:put
 registerValue
 
@@ -272,16 +234,35 @@ quote prompt
     tokens dup list:empty equals 
     [ drop ]
     [
-        list:pop list:empty swap list:push environment rot swap
-        run 
-        rot rot drop swap dup list:empty equals 
-        [
-            drop 
-            show io:print "\n" io:print
+        list:pop dup commands swap [ ] map:get
+        dup list:empty equals
+        [  
+            drop
+            dup type "string" equals [ ] [ show ] boolean:choose call
+            swap  
+            [ dup type "string" equals [ ] [ show ] boolean:choose call ] list:map
+            system:execute
+            system:wait
+            dup 0 equals [ drop ] [
+                "[" io:print show io:print "]\n" io:print
+            ] boolean:choose call
         ]
         [
             swap drop
-            exception:message io:print "\n" io:print
+            dictionary rot swap run
+            swap dup list:empty equals
+            [ 
+                drop 
+                [ show io:print "\n" io:print ] list:each
+                drop
+            ]
+            [ 
+                exception:message dup type "string" equals
+                [ ] [ show ] boolean:choose call
+                io:print "\n" io:print
+                drop drop
+            ]
+            boolean:choose call
         ]
         boolean:choose call
     ]
