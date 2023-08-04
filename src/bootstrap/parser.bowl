@@ -1,0 +1,119 @@
+
+quote parser:result:success
+"Create a new successful parse result on basis of the rest of the input and the value.\n\nStack behavior: ( rest value -- [ true rest value ] )"
+"list:empty swap list:push swap list:push true list:push" tokens
+register
+
+quote parser:result:failure
+"Create a new erroneous parse result on basis of the rest of the input and an error message.\n\nStack behavior: ( rest error -- [ false rest error ] )"
+"list:empty swap list:push swap list:push false list:push" tokens
+register
+
+quote parser:result:isSuccess
+"Checks whether the provided parse result is successful.\n\nStack behavior: ( result -- boolean )"
+"list:pop swap drop" tokens
+register
+
+quote parser:result:isFailure
+"Checks whether the provided parse result is erroneous.\n\nStack behavior: ( result -- boolean )"
+"parser:result:isSuccess boolean:not" tokens
+register
+
+quote parser:result:map
+"Transform the value of the provided parse result by applying the provided program to it.\n\nStack behavior: ( result program -- result )"
+"swap list:pop" tokens
+    "list:pop rot list:pop rot rot apply list:push swap list:push true list:push" tokens list:append
+    "false list:push swap drop" tokens list:append
+"boolean:choose call" tokens list:concat
+register
+
+quote parser:result:join
+"Joins a nested parse result.\n\nStack behavior: ( result -- result )"
+"list:pop" tokens
+    "list:pop drop list:pop swap drop" tokens list:append
+    "false list:push" tokens list:append
+"boolean:choose call" tokens list:concat
+register
+
+quote parser:result:flatMap
+"Transform the value of the provided parse result by applying the provided program to it and joining the result.\n\nStack behavior: ( result program -- result )"
+"parser:result:map parser:result:join" tokens
+register
+
+"A parser is a program which expects a string as input and returns a parse result, i.e. each parser has the stack behavior ( input -- result )" drop
+
+quote parser:success 
+"Create a new parser which will always succeed by returning the provided value.\n\nStack behavior: ( value -- parser )"
+"swap list:push" tokens
+"parser:result:success" tokens list:push
+register
+
+quote parser:failure 
+"Create a new parser which will always fail by returning the provided error message.\n\nStack behavior: ( error -- parser )"
+"swap list:push" tokens
+"parser:result:failure" tokens list:push
+register
+
+quote parser:string
+"Create a new parser from the provided string literal which recognizes exactly this string literal.\n\nStack behavior: ( string -- parser )" 
+list:empty "swap dup rot swap dup rot string:startsWith" tokens 
+    "dup rot string:length swap dup rot string:length swap dup rot number:subtract swap string:slice swap parser:result:success \"parsed: '\" io:print dup show io:print \"'\n\" io:print" tokens list:append
+    "\"unexpected input, expected '\" swap string:concat \"'\" string:concat parser:result:failure" tokens list:append
+"boolean:choose call" tokens list:concat
+list:push "swap list:push" tokens list:concat
+register
+
+quote parser:map
+"Create a new parser from the provided one by transforming its result using the provided program.\n\nStack behavior: ( parser program -- parser )"
+list:empty "parser:result:map" tokens list:push "swap list:push list:concat" tokens list:concat
+register
+
+quote parser:flatMap
+"Create a new parser from the provided one by transforming and joining its result using the provided program.\n\nStack behavior: ( parser program -- parser )"
+list:empty "parser:result:map dup parser:result:isFailure" tokens 
+    list:empty list:append
+    "list:pop drop list:pop swap list:pop swap drop call" tokens list:append
+"boolean:choose call" tokens list:concat list:push "swap list:push list:concat" tokens list:concat
+register
+
+quote parser:concat
+TODO rewrite with list literals now!
+"Create a new parser by concatenating given list of parsers.\n\nStack behavior: ( parsers -- parser )"
+"dup list:empty equals" tokens
+    list:empty list:empty parser:success list:push list:append
+    "list:pop swap parser:concat" tokens 
+        "swap dup parser:result:isFailure" tokens 
+            "swap drop" tokens list:append
+            "list:pop drop list:pop swap list:pop swap drop rot swap call dup parser:result:isFailure" tokens 
+                "swap drop" tokens list:append
+                "list:pop drop list:pop rot list:pop rot rot list:push list:push swap list:push true list:push" tokens list:append
+            "boolean:choose call" tokens list:concat
+            list:append "boolean:choose call" tokens list:concat
+        list:append "swap list:push list:concat" tokens list:concat
+    list:append
+"boolean:choose call" tokens list:concat
+register
+
+quote parser:repeat
+"Create a new parser by repeating the provided one zero or more times.\n\nStack behavior: ( parser -- parser )"
+list:empty "" tokens list:push "swap list:push" tokens list:concat
+register
+
+"abc"
+"a" parser:string
+call
+list:pop drop list:pop 
+"b" parser:string
+call
+
+
+"abc"
+list:empty
+"a" parser:string list:push
+"b" parser:string list:push
+parser:concat
+dup show io:print "\n\n" io:print
+ call 
+show io:print
+
+
